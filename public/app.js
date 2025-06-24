@@ -718,38 +718,11 @@ const carregarDadosMovimentacao = async () => {
     }
 };
 
-// Carregar profissionais nos selects
+// Carregar profissionais nos selects (função auxiliar para compatibilidade)
 const carregarProfissionaisSelects = async () => {
     try {
         const response = await api('/profissionais');
         const profissionais = response.profissionais;
-
-        // Agrupar por especialidade
-        const porEspecialidade = {};
-        profissionais.forEach(p => {
-            if (!porEspecialidade[p.especialidade]) {
-                porEspecialidade[p.especialidade] = [];
-            }
-            porEspecialidade[p.especialidade].push(p);
-        });
-
-        // Preencher selects de movimentação
-        const selects = {
-            'movProfMedicina': 'Medicina',
-            'movProfEnfermagem': 'Enfermagem',
-            'movProfFisioterapia': 'Fisioterapia',
-            'movProfBucomaxilo': 'Bucomaxilo'
-        };
-
-        Object.entries(selects).forEach(([selectId, especialidade]) => {
-            const select = document.getElementById(selectId);
-            if (select) {
-                select.innerHTML = '<option value="">Selecione - ' + especialidade + '</option>';
-                (porEspecialidade[especialidade] || []).forEach(prof => {
-                    select.innerHTML += `<option value="${prof.nome}">${prof.nome}</option>`;
-                });
-            }
-        });
 
         // Preencher select de pesquisa
         const pesquisaProf = document.getElementById('pesquisaProfissional');
