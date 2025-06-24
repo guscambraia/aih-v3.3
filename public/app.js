@@ -188,30 +188,28 @@ const carregarDashboard = async (competenciaSelecionada = null) => {
         // Buscar dados do dashboard com a competência
         const dados = await api(`/dashboard?competencia=${competencia}`);
         
-        // Criar/atualizar seletor de competência se ainda não existe
-        let seletorCompetencia = document.getElementById('seletorCompetencia');
-        if (!seletorCompetencia) {
-            // Criar container do seletor
+        // Criar/atualizar seletor de competência
+        let seletorContainer = document.querySelector('.seletor-competencia-container');
+        if (!seletorContainer) {
+            // Criar container do seletor apenas se não existir
             const dashboardContainer = document.querySelector('.dashboard');
-            const seletorContainer = document.createElement('div');
+            seletorContainer = document.createElement('div');
             seletorContainer.className = 'seletor-competencia-container';
-            seletorContainer.innerHTML = `
-                <div class="seletor-competencia">
-                    <label for="selectCompetencia">Competência:</label>
-                    <select id="selectCompetencia" onchange="carregarDashboard(this.value)">
-                        ${dados.competencias_disponiveis.map(comp => 
-                            `<option value="${comp}" ${comp === competencia ? 'selected' : ''}>${comp}</option>`
-                        ).join('')}
-                    </select>
-                    <span class="competencia-info">📅 Visualizando dados de ${competencia}</span>
-                </div>
-            `;
             dashboardContainer.parentNode.insertBefore(seletorContainer, dashboardContainer);
-        } else {
-            // Atualizar select existente
-            const select = document.getElementById('selectCompetencia');
-            select.value = competencia;
         }
+        
+        // Sempre atualizar o conteúdo do seletor
+        seletorContainer.innerHTML = `
+            <div class="seletor-competencia">
+                <label for="selectCompetencia">Competência:</label>
+                <select id="selectCompetencia" onchange="carregarDashboard(this.value)">
+                    ${dados.competencias_disponiveis.map(comp => 
+                        `<option value="${comp}" ${comp === competencia ? 'selected' : ''}>${comp}</option>`
+                    ).join('')}
+                </select>
+                <span class="competencia-info">📅 Visualizando dados de ${competencia}</span>
+            </div>
+        `;
         
         // Atualizar cards do dashboard
         const dashboard = document.querySelector('.dashboard');
