@@ -5,7 +5,7 @@ const { initDB, run, get, all } = require('./database');
 const { verificarToken, login, cadastrarUsuario } = require('./auth');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(cors());
@@ -97,6 +97,19 @@ app.get('/api/dashboard', verificarToken, async (req, res) => {
         
         const totalEmProcessamento = (totalEntradasSUS.count || 0) - (totalSaidasHospital.count || 0);
         
+        // 5. Total de AIHs finalizadas desde o início (status 1 e 4)
+        const totalFinalizadasGeral = await get(`
+            SELECT COUNT(*) as count 
+            FROM aihs 
+            WHERE status IN (1, 4)
+        `);
+        
+        // 6. Total de AIHs cadastradas desde o início
+        const totalAIHsGeral = await get(`
+            SELECT COUNT(*) as count 
+            FROM aihs
+        `);
+        
         // Dados adicionais para contexto
         const totalAIHsCompetencia = await get(`
             SELECT COUNT(*) as count 
@@ -137,6 +150,8 @@ app.get('/api/dashboard', verificarToken, async (req, res) => {
             total_entradas_sus: totalEntradasSUS.count,
             total_saidas_hospital: totalSaidasHospital.count,
             total_em_processamento_geral: totalEmProcessamento,
+            total_finalizadas_geral: totalFinalizadasGeral.count,
+            total_aihs_geral: totalAIHsGeral.count,
             
             // Valores financeiros da competência
             valores_competencia: {
@@ -698,6 +713,6 @@ app.get('*', (req, res) => {
 });
 
 // Iniciar servidor
-app.listen(PORT, () => {
-    console.log(`Servidor rodando em http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Servidor rodando em http://0.0.0.0:${PORT}`);
 });

@@ -254,6 +254,24 @@ const carregarDashboard = async (competenciaSelecionada = null) => {
                 <p class="stat-subtitle">Desde o início do sistema</p>
                 <p class="stat-detail">Total: ${dados.total_entradas_sus} entradas - ${dados.total_saidas_hospital} saídas</p>
             </div>
+            
+            <!-- Card 5: Total Finalizadas (Histórico Geral) -->
+            <div class="stat-card success" style="border-left: 4px solid #10b981;">
+                <div class="stat-icon">🎯</div>
+                <h3>Total Finalizadas</h3>
+                <p class="stat-number" id="totalFinalizadasGeral">${dados.total_finalizadas_geral}</p>
+                <p class="stat-subtitle">Desde o início do sistema</p>
+                <p class="stat-detail">AIHs concluídas (Status 1 e 4)</p>
+            </div>
+            
+            <!-- Card 6: Total Geral Cadastradas -->
+            <div class="stat-card" style="border-left: 4px solid #6366f1;">
+                <div class="stat-icon">📈</div>
+                <h3>Total Cadastradas</h3>
+                <p class="stat-number" id="totalAIHsGeral">${dados.total_aihs_geral}</p>
+                <p class="stat-subtitle">Desde o início do sistema</p>
+                <p class="stat-detail">Todas as AIHs do sistema</p>
+            </div>
         `;
         
         // Adicionar seção de resumo financeiro
