@@ -538,7 +538,7 @@ app.get('/api/export/:formato', verificarToken, async (req, res) => {
             res.setHeader('Content-Disposition', 'attachment; filename=export-aih.csv');
             res.send(csv);
         } else if (req.params.formato === 'excel') {
-            // Criar workbook Excel real (XLSX)
+            // Criar workbook Excel real (XLS compatível)
             const worksheet = XLSX.utils.json_to_sheet(aihs.map(a => ({
                 'Número AIH': a.numero_aih,
                 'Valor Inicial': a.valor_inicial,
@@ -553,10 +553,10 @@ app.get('/api/export/:formato', verificarToken, async (req, res) => {
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'AIHs');
             
-            const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+            const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xls' });
             
-            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            res.setHeader('Content-Disposition', 'attachment; filename=export-aih.xlsx');
+            res.setHeader('Content-Type', 'application/vnd.ms-excel');
+            res.setHeader('Content-Disposition', 'attachment; filename=export-aih.xls');
             res.send(buffer);
         }
     } catch (err) {
@@ -735,10 +735,10 @@ app.get('/api/aih/:id/movimentacoes/export/:formato', verificarToken, async (req
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, `Histórico AIH ${aih.numero_aih}`);
             
-            const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+            const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xls' });
             
-            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            res.setHeader('Content-Disposition', `attachment; filename=${nomeArquivo}.xlsx`);
+            res.setHeader('Content-Type', 'application/vnd.ms-excel');
+            res.setHeader('Content-Disposition', `attachment; filename=${nomeArquivo}.xls`);
             res.send(buffer);
         } else {
             res.status(400).json({ error: 'Formato não suportado' });
@@ -833,15 +833,15 @@ app.get('/api/relatorios/:tipo/export', verificarToken, async (req, res) => {
             return res.status(404).json({ error: 'Nenhum dado encontrado' });
         }
         
-        // Criar Excel real (XLSX)
+        // Criar Excel real (XLS compatível)
         const worksheet = XLSX.utils.json_to_sheet(dados);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, tipo.charAt(0).toUpperCase() + tipo.slice(1));
         
-        const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xls' });
         
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', `attachment; filename=${nomeArquivo}.xlsx`);
+        res.setHeader('Content-Type', 'application/vnd.ms-excel');
+        res.setHeader('Content-Disposition', `attachment; filename=${nomeArquivo}.xls`);
         res.send(buffer);
         
     } catch (err) {

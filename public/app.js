@@ -405,7 +405,7 @@ const mostrarInfoAIH = (aih) => {
                             style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); 
                                    color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; 
                                    cursor: pointer; font-size: 0.875rem; display: flex; align-items: center; gap: 0.25rem;">
-                        📊 Excel
+                        📊 Excel (XLS)
                     </button>
                 </div>
             </h4>
@@ -630,7 +630,7 @@ document.getElementById('btnNovaMovimentacao').addEventListener('click', () => {
 // Carregue dados necessários para movimentação
 const carregarDadosMovimentacao = async () => {
     try {
-        // Carregar profissionais
+        // Carregar profissionais primeiro
         const profResult = await api('/profissionais');
         const profissionais = profResult.profissionais;
 
@@ -682,11 +682,11 @@ const carregarDadosMovimentacao = async () => {
             document.getElementById('movValor').value = state.aihAtual.valor_atual;
         }
 
+        // Pré-selecionar profissionais da última movimentação APÓS carregar os selects
+        await carregarProfissionaisUltimaMovimentacao();
+
         // Carregar e exibir glosas existentes (sempre por último)
         await carregarGlosas();
-
-        // Carregar e pré-selecionar profissionais da última movimentação
-        await carregarProfissionaisUltimaMovimentacao();
 
     } catch (err) {
         console.error('Erro ao carregar dados:', err);
@@ -1595,9 +1595,14 @@ window.exportarHistoricoMovimentacoes = async (formato) => {
 const carregarProfissionaisUltimaMovimentacao = async () => {
     try {
         if (state.aihAtual && state.aihAtual.movimentacoes && state.aihAtual.movimentacoes.length > 0) {
-            const ultimaMovimentacao = state.aihAtual.movimentacoes[state.aihAtual.movimentacoes.length - 1];
+            // Ordenar movimentações por data (mais recente primeiro)
+            const movimentacoesOrdenadas = [...state.aihAtual.movimentacoes].sort((a, b) => 
+                new Date(b.data_movimentacao) - new Date(a.data_movimentacao)
+            );
+            
+            const ultimaMovimentacao = movimentacoesOrdenadas[0];
 
-            //mapeia os campos de profissionais
+            // Mapeia os campos de profissionais
             const especialidadesCampos = {
                 'movProfMedicina': 'prof_medicina',
                 'movProfEnfermagem': 'prof_enfermagem',
@@ -1605,12 +1610,23 @@ const carregarProfissionaisUltimaMovimentacao = async () => {
                 'movProfBucomaxilo': 'prof_bucomaxilo'
             };
 
-            for (const [selectId, campoProfissional] of Object.entries(especialidadesCampos)) {
-                const select = document.getElementById(selectId);
-                if (select && ultimaMovimentacao[campoProfissional]) {
-                    select.value = ultimaMovimentacao[campoProfissional];
+            console.log('Última movimentação encontrada:', ultimaMovimentacao);
+
+            // Aguardar um pouco para garantir que os selects foram criados
+            setTimeout(() => {
+                for (const [selectId, campoProfissional] of Object.entries(especialidadesCampos)) {
+                    const select = document.getElementById(selectId);
+                    if (select && ultimaMovimentacao[campoProfissional]) {
+                        console.log(`Pré-selecionando ${campoProfissional}: ${ultimaMovimentacao[campoProfissional]}`);
+                        select.value = ultimaMovimentacao[campoProfissional];
+                        
+                        // Verificar se o valor foi realmente selecionado
+                        if (select.value !== ultimaMovimentacao[campoProfissional]) {
+                            console.warn(`Falha ao pré-selecionar ${campoProfissional}: valor não encontrado no select`);
+                        }
+                    }
                 }
-            }
+            }, 100);
         }
     } catch (error) {
         console.error('Erro ao carregar e pré-selecionar profissionais da última movimentação:', error);
