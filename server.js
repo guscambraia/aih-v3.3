@@ -5,7 +5,7 @@ const { initDB, run, get, all } = require('./database');
 const { verificarToken, login, cadastrarUsuario } = require('./auth');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 // Middlewares
 app.use(cors());
