@@ -679,6 +679,77 @@ app.get('/api/relatorios/:tipo', verificarToken, async (req, res) => {
     }
 });
 
+// Exportar histórico de movimentações de uma AIH
+app.get('/api/aih/:id/movimentacoes/export/:formato', verificarToken, async (req, res) => {
+    try {
+        const aihId = req.params.id;
+        const formato = req.params.formato;
+        
+        // Buscar dados da AIH
+        const aih = await get('SELECT numero_aih FROM aihs WHERE id = ?', [aihId]);
+        if (!aih) {
+            return res.status(404).json({ error: 'AIH não encontrada' });
+        }
+        
+        // Buscar movimentações com detalhes
+        const movimentacoes = await all(`
+            SELECT 
+                m.*,
+                u.nome as usuario_nome
+            FROM movimentacoes m
+            LEFT JOIN usuarios u ON m.usuario_id = u.id
+            WHERE m.aih_id = ?
+            ORDER BY m.data_movimentacao DESC
+        `, [aihId]);
+        
+        const nomeArquivo = `historico-movimentacoes-AIH-${aih.numero_aih}-${new Date().toISOString().split('T')[0]}`;
+        
+        if (formato === 'csv') {
+            const csv = [
+                'Data,Tipo,Status,Valor,Competencia,Prof_Medicina,Prof_Enfermagem,Prof_Fisioterapia,Prof_Bucomaxilo,Usuario,Observacoes',
+                ...movimentacoes.map(m => 
+                    `"${new Date(m.data_movimentacao).toLocaleString('pt-BR')}","${m.tipo === 'entrada_sus' ? 'Entrada SUS' : 'Saída Hospital'}","${getStatusExcel(m.status_aih)}","${m.valor_conta || 0}","${m.competencia || ''}","${m.prof_medicina || ''}","${m.prof_enfermagem || ''}","${m.prof_fisioterapia || ''}","${m.prof_bucomaxilo || ''}","${m.usuario_nome || ''}","${(m.observacoes || '').replace(/"/g, '""')}"`
+                )
+            ].join('\n');
+            
+            res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+            res.setHeader('Content-Disposition', `attachment; filename=${nomeArquivo}.csv`);
+            res.send('\ufeff' + csv); // BOM para UTF-8
+            
+        } else if (formato === 'xlsx') {
+            const dadosFormatados = movimentacoes.map(m => ({
+                'Data': new Date(m.data_movimentacao).toLocaleString('pt-BR'),
+                'Tipo': m.tipo === 'entrada_sus' ? 'Entrada na Auditoria SUS' : 'Saída para Auditoria Hospital',
+                'Status': getStatusExcel(m.status_aih),
+                'Valor da Conta': m.valor_conta || 0,
+                'Competência': m.competencia || '',
+                'Profissional Medicina': m.prof_medicina || '',
+                'Profissional Enfermagem': m.prof_enfermagem || '',
+                'Profissional Fisioterapia': m.prof_fisioterapia || '',
+                'Profissional Bucomaxilo': m.prof_bucomaxilo || '',
+                'Usuário Responsável': m.usuario_nome || '',
+                'Observações': m.observacoes || ''
+            }));
+            
+            const worksheet = XLSX.utils.json_to_sheet(dadosFormatados);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, `Histórico AIH ${aih.numero_aih}`);
+            
+            const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+            
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', `attachment; filename=${nomeArquivo}.xlsx`);
+            res.send(buffer);
+        } else {
+            res.status(400).json({ error: 'Formato não suportado' });
+        }
+        
+    } catch (err) {
+        console.error('Erro ao exportar histórico:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Exportar relatórios
 app.get('/api/relatorios/:tipo/export', verificarToken, async (req, res) => {
     try {

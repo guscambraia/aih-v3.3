@@ -387,11 +387,27 @@ const mostrarInfoAIH = (aih) => {
         </div>
 
         <div style="margin-top: 2rem;">
-            <h4 style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-                📊 Histórico de Movimentações
-                <span style="background: #6366f1; color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem;">
-                    ${aih.movimentacoes.length}
+            <h4 style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                <span style="display: flex; align-items: center; gap: 0.5rem;">
+                    📊 Histórico de Movimentações
+                    <span style="background: #6366f1; color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem;">
+                        ${aih.movimentacoes.length}
+                    </span>
                 </span>
+                <div style="display: flex; gap: 0.5rem; margin-left: auto;">
+                    <button onclick="exportarHistoricoMovimentacoes('csv')" 
+                            style="background: linear-gradient(135deg, #059669 0%, #047857 100%); 
+                                   color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; 
+                                   cursor: pointer; font-size: 0.875rem; display: flex; align-items: center; gap: 0.25rem;">
+                        📄 CSV
+                    </button>
+                    <button onclick="exportarHistoricoMovimentacoes('xlsx')" 
+                            style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); 
+                                   color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; 
+                                   cursor: pointer; font-size: 0.875rem; display: flex; align-items: center; gap: 0.25rem;">
+                        📊 Excel
+                    </button>
+                </div>
             </h4>
             <table>
                 <thead>
@@ -768,8 +784,7 @@ const carregarGlosas = async () => {
                         Remover
                     </button>
                 </div>
-            `).join('') || '<p>Nenhuma pendência/glosa ativa</p>';
-        }
+            `).join('') || '<p>Nenhuma pendência/glosa ativa</p>';        }
 
         // Atualizar também na tela de movimentação
         if (listaGlosasMovimentacao) {
@@ -861,10 +876,10 @@ document.getElementById('formNovaGlosa').addEventListener('submit', async (e) =>
         // Limpar formulário
         document.getElementById('formNovaGlosa').reset();
         document.getElementById('glosaQuantidade').value = 1;
-        
+
         // Recarregar glosas imediatamente
         await carregarGlosas();
-        
+
         // Mostrar confirmação
         alert('Pendência/Glosa adicionada com sucesso!');
     } catch (err) {
@@ -879,10 +894,10 @@ document.getElementById('btnSalvarGlosas').addEventListener('click', async () =>
             const aihAtualizada = await api(`/aih/${state.aihAtual.numero_aih}`);
             state.aihAtual = aihAtualizada;
         }
-        
+
         // Voltar para tela anterior
         voltarTelaAnterior();
-        
+
         // Se voltou para movimentação, forçar atualização das glosas
         if (state.telaAnterior === 'telaMovimentacao') {
             setTimeout(async () => {
@@ -1558,3 +1573,159 @@ if (aih.movimentacoes?.length > 0) {
             </div>
             `;
         }
+
+// Adiciona a função exportarHistoricoMovimentacoes
+window.exportarHistoricoMovimentacoes = async (formato) => {
+    if (!state.aihAtual || !state.aihAtual.movimentacoes) {
+        alert('Não há histórico de movimentações para exportar.');
+        return;
+    }
+
+    try {
+        // Preparar dados para exportação
+        const dadosExportacao = state.aihAtual.movimentacoes.map(mov => ({
+            Data: new Date(mov.data_movimentacao).toLocaleDateString('pt-BR'),
+            Tipo: getTipoDescricao(mov.tipo),
+            Status: getStatusDescricao(mov.status_aih),
+            Valor: mov.valor_conta ? mov.valor_conta.toFixed(2) : '0,00',
+            Competencia: mov.competencia || '-',
+            Observações: mov.observacoes || '-'
+        }));
+
+        // Converter para o formato desejado
+        let blob;
+        let filename = `historico-movimentacoes-aih-${state.aihAtual.numero_aih}-${new Date().toISOString().split('T')[0]}`;
+
+        if (formato === 'csv') {
+            // CSV
+            const csvRows = [
+                Object.keys(dadosExportacao[0]).join(','), // Header
+                ...dadosExportacao.map(row => Object.values(row).join(',')) // Data rows
+            ];
+            const csvString = csvRows.join('\n');
+            blob = new Blob([csvString], { type: 'text/csv' });
+            filename += '.csv';
+        } else if (formato === 'xlsx') {
+            // XLSX (Excel) - Requer uma biblioteca como SheetJS (não incluída aqui)
+            // Como não podemos incluir bibliotecas externas, simulamos a exportação para CSV
+            // e alertamos o usuário.
+            alert('Exportação para Excel (xlsx) não suportada nesta versão. Será exportado em formato CSV.');
+            const csvRows = [
+                Object.keys(dadosExportacao[0]).join(','), // Header
+                ...dadosExportacao.map(row => Object.values(row).join(',')) // Data rows
+            ];
+            const csvString = csvRows.join('\n');
+            blob = new Blob([csvString], { type: 'text/csv' });
+            filename += '.csv';
+
+        } else {
+            alert('Formato de exportação não suportado.');
+            return;
+        }
+
+        // Criar link para download
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+    } catch (error) {
+        console.error('Erro ao exportar histórico de movimentações:', error);
+        alert('Erro ao exportar histórico de movimentações: ' + error.message);
+    }
+};
+
+// Função para carregar os profissionais da ultima movimentação e pre-selecionar
+const carregarProfissionaisUltimaMovimentacao = async () => {
+    try {
+        if (state.aihAtual && state.aihAtual.movimentacoes && state.aihAtual.movimentacoes.length > 0) {
+            const ultimaMovimentacao = state.aihAtual.movimentacoes[state.aihAtual.movimentacoes.length - 1];
+
+            //mapeia os campos de profissionais
+            const especialidadesCampos = {
+                'movProfMedicina': 'prof_medicina',
+                'movProfEnfermagem': 'prof_enfermagem',
+                'movProfFisioterapia': 'prof_fisioterapia',
+                'movProfBucomaxilo': 'prof_bucomaxilo'
+            };
+
+            for (const [selectId, campoProfissional] of Object.entries(especialidadesCampos)) {
+                const select = document.getElementById(selectId);
+                if (select && ultimaMovimentacao[campoProfissional]) {
+                    select.value = ultimaMovimentacao[campoProfissional];
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao carregar e pré-selecionar profissionais da última movimentação:', error);
+    }
+};
+// Ao carregar os dados de movimentação, também carrega os profissionais da última movimentação
+// Modifique a função carregarDadosMovimentacao para chamar carregarProfissionaisUltimaMovimentacao
+const carregarDadosMovimentacao = async () => {
+    try {
+        // Carregar profissionais
+        const profResult = await api('/profissionais');
+        const profissionais = profResult.profissionais;
+
+        // Preencher selects de profissionais
+        const especialidades = ['medicina', 'enfermagem', 'fisioterapia', 'bucomaxilo'];
+        especialidades.forEach(esp => {
+            const select = document.getElementById(`movProf${esp.charAt(0).toUpperCase() + esp.slice(1)}`);
+            if (select) {
+                select.innerHTML = `<option value="">Selecione - ${esp.charAt(0).toUpperCase() + esp.slice(1)}</option>`;
+                profissionais
+                    .filter(p => p.especialidade.toLowerCase() === esp.toLowerCase())
+                    .forEach(prof => {
+                        select.innerHTML += `<option value="${prof.nome}">${prof.nome}</option>`;
+                    });
+            }
+        });
+
+        // Carregar próxima movimentação possível
+        if (state.aihAtual) {
+            const proximaMovResult = await api(`/aih/${state.aihAtual.id}/proxima-movimentacao`);
+
+            // Configurar o tipo de movimentação automaticamente
+            const tipoSelect = document.getElementById('movTipo');
+            if (tipoSelect) {
+                tipoSelect.innerHTML = `<option value="${proximaMovResult.proximo_tipo}">${proximaMovResult.descricao}</option>`;
+                tipoSelect.disabled = true; // Não permite alteração
+            }
+
+            // Exibir explicação
+            const explicacaoDiv = document.getElementById('explicacaoMovimentacao');
+            if (explicacaoDiv) {
+                explicacaoDiv.innerHTML = `
+                    <div class="info-box">
+                        <h4>📝 Próxima Movimentação</h4>
+                        <p><strong>${proximaMovResult.descricao}</strong></p>
+                        <p class="explicacao">${proximaMovResult.explicacao}</p>
+                        ${proximaMovResult.ultima_movimentacao ?
+                            `<p class="historico">Última movimentação: ${proximaMovResult.ultima_movimentacao === 'entrada_sus' ? 'Entrada na Auditoria SUS' : 'Saída para Auditoria Hospital'}</p>` :
+                            '<p class="historico">Esta será a primeira movimentação desta AIH.</p>'
+                        }
+                    </div>
+                `;
+            }
+        }
+
+        // Preencher dados da AIH atual
+        if (state.aihAtual) {
+            document.getElementById('movCompetencia').value = state.aihAtual.competencia;
+            document.getElementById('movValor').value = state.aihAtual.valor_atual;
+        }
+
+        // Carregar e exibir glosas existentes (sempre por último)
+        await carregarGlosas();
+
+        // Carregar e pré-selecionar profissionais da última movimentação
+        await carregarProfissionaisUltimaMovimentacao();
+
+    } catch (err) {
+        console.error('Erro ao carregar dados:', err);
+    }
+};
