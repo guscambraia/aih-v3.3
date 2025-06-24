@@ -630,11 +630,11 @@ document.getElementById('btnNovaMovimentacao').addEventListener('click', () => {
 // Carregue dados necessários para movimentação
 const carregarDadosMovimentacao = async () => {
     try {
-        // Carregar profissionais primeiro
+        // 1. Carregar profissionais primeiro
         const profResult = await api('/profissionais');
         const profissionais = profResult.profissionais;
 
-        // Preencher selects de profissionais
+        // 2. Preencher selects de profissionais
         const especialidades = ['medicina', 'enfermagem', 'fisioterapia', 'bucomaxilo'];
         especialidades.forEach(esp => {
             const select = document.getElementById(`movProf${esp.charAt(0).toUpperCase() + esp.slice(1)}`);
@@ -648,7 +648,42 @@ const carregarDadosMovimentacao = async () => {
             }
         });
 
-        // Carregar próxima movimentação possível
+        // 3. Pré-selecionar profissionais da última movimentação IMEDIATAMENTE após preencher os selects
+        let profissionaisPreSelecionados = null;
+        if (state.aihAtual && state.aihAtual.movimentacoes && state.aihAtual.movimentacoes.length > 0) {
+            const movimentacoesOrdenadas = [...state.aihAtual.movimentacoes].sort((a, b) => 
+                new Date(b.data_movimentacao) - new Date(a.data_movimentacao)
+            );
+            profissionaisPreSelecionados = movimentacoesOrdenadas[0];
+            console.log('Pré-selecionando profissionais da última movimentação:', profissionaisPreSelecionados);
+            
+            // Mapear e aplicar seleções imediatamente
+            const mapeamentoProfissionais = {
+                'movProfMedicina': 'prof_medicina',
+                'movProfEnfermagem': 'prof_enfermagem', 
+                'movProfFisioterapia': 'prof_fisioterapia',
+                'movProfBucomaxilo': 'prof_bucomaxilo'
+            };
+
+            Object.entries(mapeamentoProfissionais).forEach(([selectId, campo]) => {
+                const select = document.getElementById(selectId);
+                const valorProfissional = profissionaisPreSelecionados[campo];
+                
+                if (select && valorProfissional) {
+                    console.log(`Aplicando pré-seleção: ${selectId} = ${valorProfissional}`);
+                    select.value = valorProfissional;
+                    
+                    // Verificar se foi aplicado com sucesso
+                    if (select.value === valorProfissional) {
+                        console.log(`✅ Pré-seleção aplicada com sucesso: ${selectId}`);
+                    } else {
+                        console.warn(`❌ Falha na pré-seleção: ${selectId}, valor não encontrado no select`);
+                    }
+                }
+            });
+        }
+
+        // 4. Carregar próxima movimentação possível
         if (state.aihAtual) {
             const proximaMovResult = await api(`/aih/${state.aihAtual.id}/proxima-movimentacao`);
 
@@ -676,16 +711,13 @@ const carregarDadosMovimentacao = async () => {
             }
         }
 
-        // Preencher dados da AIH atual
+        // 5. Preencher dados da AIH atual
         if (state.aihAtual) {
             document.getElementById('movCompetencia').value = state.aihAtual.competencia;
             document.getElementById('movValor').value = state.aihAtual.valor_atual;
         }
 
-        // Pré-selecionar profissionais da última movimentação APÓS carregar os selects
-        await carregarProfissionaisUltimaMovimentacao();
-
-        // Carregar e exibir glosas existentes (sempre por último)
+        // 6. Carregar e exibir glosas existentes (sempre por último)
         await carregarGlosas();
 
     } catch (err) {
@@ -1591,44 +1623,3 @@ window.exportarHistoricoMovimentacoes = async (formato) => {
     }
 };
 
-// Função para carregar os profissionais da ultima movimentação e pre-selecionar
-const carregarProfissionaisUltimaMovimentacao = async () => {
-    try {
-        if (state.aihAtual && state.aihAtual.movimentacoes && state.aihAtual.movimentacoes.length > 0) {
-            // Ordenar movimentações por data (mais recente primeiro)
-            const movimentacoesOrdenadas = [...state.aihAtual.movimentacoes].sort((a, b) => 
-                new Date(b.data_movimentacao) - new Date(a.data_movimentacao)
-            );
-            
-            const ultimaMovimentacao = movimentacoesOrdenadas[0];
-
-            // Mapeia os campos de profissionais
-            const especialidadesCampos = {
-                'movProfMedicina': 'prof_medicina',
-                'movProfEnfermagem': 'prof_enfermagem',
-                'movProfFisioterapia': 'prof_fisioterapia',
-                'movProfBucomaxilo': 'prof_bucomaxilo'
-            };
-
-            console.log('Última movimentação encontrada:', ultimaMovimentacao);
-
-            // Aguardar um pouco para garantir que os selects foram criados
-            setTimeout(() => {
-                for (const [selectId, campoProfissional] of Object.entries(especialidadesCampos)) {
-                    const select = document.getElementById(selectId);
-                    if (select && ultimaMovimentacao[campoProfissional]) {
-                        console.log(`Pré-selecionando ${campoProfissional}: ${ultimaMovimentacao[campoProfissional]}`);
-                        select.value = ultimaMovimentacao[campoProfissional];
-                        
-                        // Verificar se o valor foi realmente selecionado
-                        if (select.value !== ultimaMovimentacao[campoProfissional]) {
-                            console.warn(`Falha ao pré-selecionar ${campoProfissional}: valor não encontrado no select`);
-                        }
-                    }
-                }
-            }, 100);
-        }
-    } catch (error) {
-        console.error('Erro ao carregar e pré-selecionar profissionais da última movimentação:', error);
-    }
-};
