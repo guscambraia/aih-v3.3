@@ -22,57 +22,50 @@
             </div>
         </div>
 
-        <!-- Tela Principal -->
-        <div id="telaPrincipal" class="tela">
-            <header>
-                <h1>Sistema de Controle de AIH</h1>
-                <div class="user-info">
-                    <span id="nomeUsuario"></span>
-                    <button id="btnSair">Sair</button>
-                </div>
-            </header>
-            
-            <div class="dashboard">
-                <div class="stat-card">
-                    <h3>Total Cadastradas</h3>
-                    <p class="stat-number" id="totalCadastradas">0</p>
-                    <p class="stat-subtitle">AIHs no sistema</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Em Processamento</h3>
-                    <p class="stat-number" id="emProcessamento">0</p>
-                    <p class="stat-subtitle">Aguardando finalização</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Distribuição por Status</h3>
-                    <div id="statusChart" class="mini-chart"></div>
-                </div>
-            </div>
+        <!-- Substitua a seção do dashboard na TELA PRINCIPAL pelo código abaixo -->
 
-            <div class="menu-principal">
-                <button class="menu-btn" id="btnInformarAIH">
-                    <span class="icon">📝</span>
-                    <span>Informar AIH</span>
-                </button>
-                <button class="menu-btn" id="btnBuscarAIH">
-                    <span class="icon">🔍</span>
-                    <span>Buscar AIH</span>
-                </button>
-                <button class="menu-btn" id="btnBackup">
-                    <span class="icon">💾</span>
-                    <span>Backup/Exportar</span>
-                </button>
-                <button class="menu-btn" id="btnConfiguracoes">
-                    <span class="icon">⚙️</span>
-                    <span>Configurações</span>
-                </button>
-                <button class="menu-btn" id="btnRelatorios">
-                    <span class="icon">📊</span>
-                    <span>Relatórios</span>
-                </button>
-            </div>
+<!-- Tela Principal com menu no topo -->
+<div id="telaPrincipal" class="tela">
+    <header>
+        <h1>Sistema de Controle de AIH</h1>
+        <div class="user-info">
+            <span id="nomeUsuario"></span>
+            <button id="btnSair">Sair</button>
         </div>
-
+    </header>
+    
+    <!-- Menu Principal no topo -->
+    <div class="menu-principal">
+        <button class="menu-btn" id="btnInformarAIH">
+            <span class="icon">📝</span>
+            <span>Informar AIH</span>
+        </button>
+        <button class="menu-btn" id="btnBuscarAIH">
+            <span class="icon">🔍</span>
+            <span>Buscar AIH</span>
+        </button>
+        <button class="menu-btn" id="btnBackup">
+            <span class="icon">💾</span>
+            <span>Backup/Exportar</span>
+        </button>
+        <button class="menu-btn" id="btnConfiguracoes">
+            <span class="icon">⚙️</span>
+            <span>Configurações</span>
+        </button>
+        <button class="menu-btn" id="btnRelatorios">
+            <span class="icon">📊</span>
+            <span>Relatórios</span>
+        </button>
+    </div>
+    
+    <!-- O seletor de competência será inserido dinamicamente aqui pelo JavaScript -->
+    
+    <div class="dashboard">
+        <!-- Os cards serão inseridos dinamicamente pelo JavaScript -->
+    </div>
+    
+    <!-- O resumo financeiro será inserido dinamicamente aqui pelo JavaScript -->
+</div>
         <!-- Tela Informar AIH -->
         <div id="telaInformarAIH" class="tela">
             <header>

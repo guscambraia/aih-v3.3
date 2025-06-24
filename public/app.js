@@ -179,92 +179,145 @@ const animarNumero = (elementId, valorFinal) => {
     }, 16);
 };
 
-// Dashboard aprimorado
-const carregarDashboard = async () => {
+// Dashboard aprimorado com seletor de competência
+const carregarDashboard = async (competenciaSelecionada = null) => {
     try {
-        const dados = await api('/dashboard');
+        // Se não foi passada competência, usar a atual
+        const competencia = competenciaSelecionada || getCompetenciaAtual();
         
-        // Atualizar números principais com animação
-        animarNumero('totalCadastradas', dados.total_cadastradas);
-        animarNumero('emProcessamento', dados.em_processamento);
+        // Buscar dados do dashboard com a competência
+        const dados = await api(`/dashboard?competencia=${competencia}`);
         
-        // Taxa de finalização
-        const finalizadas = (dados.por_status[1] || 0) + (dados.por_status[4] || 0);
-        const taxaFinalizacao = dados.total_cadastradas > 0 
-            ? Math.round((finalizadas / dados.total_cadastradas) * 100) 
-            : 0;
-        
-        // Mini gráfico melhorado
-        const chartDiv = document.getElementById('statusChart');
-        chartDiv.innerHTML = '';
-        
-        const statusLabels = ['Fin.Dir.', 'At.Ind.', 'At.Disc.', 'Fin.Disc.'];
-        const statusColors = ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-        
-        const maxValue = Math.max(...Object.values(dados.por_status));
-        
-        for (let status = 1; status <= 4; status++) {
-            const valor = dados.por_status[status] || 0;
-            const altura = maxValue > 0 ? (valor / maxValue) * 100 : 0;
-            
-            const bar = document.createElement('div');
-            bar.className = 'bar';
-            bar.style.height = altura + 'px';
-            bar.style.background = statusColors[status - 1];
-            bar.setAttribute('data-value', valor);
-            bar.setAttribute('data-label', statusLabels[status - 1]);
-            chartDiv.appendChild(bar);
-        }
-        
-        // Dashboard extra com resumo
-        const dashboardExtra = document.getElementById('dashboardExtra');
-        if (dashboardExtra) {
-            const diferencaValor = dados.valores.inicial - dados.valores.atual;
-            
-            dashboardExtra.innerHTML = `
-                <div class="info-summary">
-                    <div class="summary-item">
-                        <h4>Taxa de Finalização</h4>
-                        <p>${taxaFinalizacao}%</p>
-                    </div>
-                    <div class="summary-item">
-                        <h4>Total de Glosas</h4>
-                        <p>${dados.total_glosas}</p>
-                    </div>
-                    <div class="summary-item">
-                        <h4>Valor Total Inicial</h4>
-                        <p>R$ ${dados.valores.inicial.toFixed(2)}</p>
-                    </div>
-                    <div class="summary-item">
-                        <h4>Diferença Total</h4>
-                        <p style="color: ${diferencaValor > 0 ? '#ef4444' : '#10b981'}">
-                            R$ ${Math.abs(diferencaValor).toFixed(2)}
-                        </p>
-                    </div>
+        // Criar/atualizar seletor de competência se ainda não existe
+        let seletorCompetencia = document.getElementById('seletorCompetencia');
+        if (!seletorCompetencia) {
+            // Criar container do seletor
+            const dashboardContainer = document.querySelector('.dashboard');
+            const seletorContainer = document.createElement('div');
+            seletorContainer.className = 'seletor-competencia-container';
+            seletorContainer.innerHTML = `
+                <div class="seletor-competencia">
+                    <label for="selectCompetencia">Competência:</label>
+                    <select id="selectCompetencia" onchange="carregarDashboard(this.value)">
+                        ${dados.competencias_disponiveis.map(comp => 
+                            `<option value="${comp}" ${comp === competencia ? 'selected' : ''}>${comp}</option>`
+                        ).join('')}
+                    </select>
+                    <span class="competencia-info">📅 Visualizando dados de ${competencia}</span>
                 </div>
-                
-                ${dados.ultimas_aihs.length > 0 ? `
-                    <div style="margin-top: 2rem; background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                        <h3 style="margin-bottom: 1rem; color: #1e293b;">📋 Últimas AIHs Cadastradas</h3>
-                        <div class="lista-items">
-                            ${dados.ultimas_aihs.map(aih => `
-                                <div class="lista-item">
-                                    <span><strong>AIH ${aih.numero_aih}</strong></span>
-                                    <span class="status-badge status-${aih.status}">${getStatusDescricao(aih.status)}</span>
-                                    <span style="color: #64748b; font-size: 0.875rem;">
-                                        ${new Date(aih.criado_em).toLocaleDateString('pt-BR')}
-                                    </span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
             `;
+            dashboardContainer.parentNode.insertBefore(seletorContainer, dashboardContainer);
+        } else {
+            // Atualizar select existente
+            const select = document.getElementById('selectCompetencia');
+            select.value = competencia;
         }
+        
+        // Atualizar cards do dashboard
+        const dashboard = document.querySelector('.dashboard');
+        dashboard.innerHTML = `
+            <!-- Card 1: Em Processamento na Competência -->
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <h3>Em Processamento</h3>
+                <p class="stat-number" id="emProcessamentoCompetencia">${dados.em_processamento_competencia}</p>
+                <p class="stat-subtitle">AIHs em análise em ${competencia}</p>
+                <p class="stat-detail">Entradas SUS - Saídas Hospital</p>
+            </div>
+            
+            <!-- Card 2: Finalizadas na Competência -->
+            <div class="stat-card success">
+                <div class="stat-icon">✅</div>
+                <h3>Finalizadas</h3>
+                <p class="stat-number" id="finalizadasCompetencia">${dados.finalizadas_competencia}</p>
+                <p class="stat-subtitle">AIHs concluídas em ${competencia}</p>
+                <p class="stat-detail">Status 1 e 4</p>
+            </div>
+            
+            <!-- Card 3: Com Pendências na Competência -->
+            <div class="stat-card warning">
+                <div class="stat-icon">⚠️</div>
+                <h3>Com Pendências</h3>
+                <p class="stat-number" id="comPendenciasCompetencia">${dados.com_pendencias_competencia}</p>
+                <p class="stat-subtitle">AIHs com glosas em ${competencia}</p>
+                <p class="stat-detail">Status 2 e 3</p>
+            </div>
+            
+            <!-- Card 4: Total Geral em Processamento -->
+            <div class="stat-card info">
+                <div class="stat-icon">🏥</div>
+                <h3>Total em Processamento</h3>
+                <p class="stat-number" id="totalProcessamentoGeral">${dados.total_em_processamento_geral}</p>
+                <p class="stat-subtitle">Desde o início do sistema</p>
+                <p class="stat-detail">Total: ${dados.total_entradas_sus} entradas - ${dados.total_saidas_hospital} saídas</p>
+            </div>
+        `;
+        
+        // Adicionar seção de resumo financeiro
+        const resumoFinanceiro = document.createElement('div');
+        resumoFinanceiro.className = 'resumo-financeiro';
+        resumoFinanceiro.innerHTML = `
+            <h3>💰 Resumo Financeiro - ${competencia}</h3>
+            <div class="resumo-cards">
+                <div class="resumo-card">
+                    <span class="resumo-label">Valor Inicial Total</span>
+                    <span class="resumo-valor">R$ ${dados.valores_competencia.inicial.toFixed(2)}</span>
+                </div>
+                <div class="resumo-card">
+                    <span class="resumo-label">Valor Atual Total</span>
+                    <span class="resumo-valor">R$ ${dados.valores_competencia.atual.toFixed(2)}</span>
+                </div>
+                <div class="resumo-card">
+                    <span class="resumo-label">Média de Glosas</span>
+                    <span class="resumo-valor" style="color: var(--danger)">R$ ${dados.valores_competencia.media_glosa.toFixed(2)}</span>
+                </div>
+                <div class="resumo-card">
+                    <span class="resumo-label">Total de AIHs</span>
+                    <span class="resumo-valor">${dados.total_aihs_competencia}</span>
+                </div>
+            </div>
+        `;
+        
+        // Adicionar após o dashboard
+        const dashboardContainer = document.querySelector('.dashboard');
+        const resumoExistente = document.querySelector('.resumo-financeiro');
+        if (resumoExistente) {
+            resumoExistente.remove();
+        }
+        dashboardContainer.parentNode.insertBefore(resumoFinanceiro, dashboardContainer.nextSibling);
+        
+        // Animar números (opcional)
+        animarNumeros();
         
     } catch (err) {
         console.error('Erro ao carregar dashboard:', err);
+        // Mostrar mensagem de erro no dashboard
+        document.querySelector('.dashboard').innerHTML = `
+            <div class="erro-dashboard">
+                <p>⚠️ Erro ao carregar dados do dashboard</p>
+                <button onclick="carregarDashboard()">Tentar novamente</button>
+            </div>
+        `;
     }
+};
+
+// Função auxiliar para animar os números
+const animarNumeros = () => {
+    const numeros = document.querySelectorAll('.stat-number');
+    numeros.forEach(elemento => {
+        const valorFinal = parseInt(elemento.textContent);
+        let valorAtual = 0;
+        const incremento = valorFinal / 30;
+        
+        const timer = setInterval(() => {
+            valorAtual += incremento;
+            if (valorAtual >= valorFinal) {
+                valorAtual = valorFinal;
+                clearInterval(timer);
+            }
+            elemento.textContent = Math.round(valorAtual);
+        }, 30);
+    });
 };
 
 // Mostrar informações da AIH

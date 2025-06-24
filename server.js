@@ -42,47 +42,122 @@ app.post('/api/cadastrar', async (req, res) => {
     }
 });
 
-// Dashboard aprimorado
+// Dashboard aprimorado com filtro por competência
 app.get('/api/dashboard', verificarToken, async (req, res) => {
     try {
-        const total = await get('SELECT COUNT(*) as count FROM aihs');
-        const porStatus = await all(
-            'SELECT status, COUNT(*) as count FROM aihs GROUP BY status'
-        );
+        // Pegar competência da query ou usar atual
+        const competencia = req.query.competencia || getCompetenciaAtual();
         
-        const emProcessamento = await get(
-            'SELECT COUNT(*) as count FROM aihs WHERE status IN (2, 3)'
-        );
+        // 1. AIH em processamento na competência
+        // (entrada_sus - saida_hospital) na competência específica
+        const entradasSUS = await get(`
+            SELECT COUNT(DISTINCT m.aih_id) as count 
+            FROM movimentacoes m
+            WHERE m.tipo = 'entrada_sus' 
+            AND m.competencia = ?
+        `, [competencia]);
         
-        // Estatísticas adicionais
-        const ultimasAIHs = await all(
-            'SELECT numero_aih, status, criado_em FROM aihs ORDER BY criado_em DESC LIMIT 5'
-        );
+        const saidasHospital = await get(`
+            SELECT COUNT(DISTINCT m.aih_id) as count 
+            FROM movimentacoes m
+            WHERE m.tipo = 'saida_hospital' 
+            AND m.competencia = ?
+        `, [competencia]);
         
-        const totalGlosas = await get('SELECT COUNT(*) as count FROM glosas WHERE ativa = 1');
+        const emProcessamentoCompetencia = (entradasSUS.count || 0) - (saidasHospital.count || 0);
         
-        const valorTotal = await get(
-            'SELECT SUM(valor_inicial) as inicial, SUM(valor_atual) as atual FROM aihs'
-        );
+        // 2. AIH finalizadas na competência (status 1 e 4)
+        const finalizadasCompetencia = await get(`
+            SELECT COUNT(*) as count 
+            FROM aihs 
+            WHERE status IN (1, 4) 
+            AND competencia = ?
+        `, [competencia]);
         
-        const statusMap = {};
-        porStatus.forEach(s => statusMap[s.status] = s.count);
+        // 3. AIH com pendências/glosas na competência (status 2 e 3)
+        const comPendenciasCompetencia = await get(`
+            SELECT COUNT(*) as count 
+            FROM aihs 
+            WHERE status IN (2, 3) 
+            AND competencia = ?
+        `, [competencia]);
+        
+        // 4. Total geral de entradas SUS vs saídas Hospital (desde o início)
+        const totalEntradasSUS = await get(`
+            SELECT COUNT(DISTINCT aih_id) as count 
+            FROM movimentacoes 
+            WHERE tipo = 'entrada_sus'
+        `);
+        
+        const totalSaidasHospital = await get(`
+            SELECT COUNT(DISTINCT aih_id) as count 
+            FROM movimentacoes 
+            WHERE tipo = 'saida_hospital'
+        `);
+        
+        const totalEmProcessamento = (totalEntradasSUS.count || 0) - (totalSaidasHospital.count || 0);
+        
+        // Dados adicionais para contexto
+        const totalAIHsCompetencia = await get(`
+            SELECT COUNT(*) as count 
+            FROM aihs 
+            WHERE competencia = ?
+        `, [competencia]);
+        
+        // Lista de competências disponíveis
+        const competenciasDisponiveis = await all(`
+            SELECT DISTINCT competencia 
+            FROM aihs 
+            ORDER BY 
+                CAST(SUBSTR(competencia, 4, 4) AS INTEGER) DESC,
+                CAST(SUBSTR(competencia, 1, 2) AS INTEGER) DESC
+        `);
+        
+        // Estatísticas de valores para a competência
+        const valoresCompetencia = await get(`
+            SELECT 
+                SUM(valor_inicial) as valor_inicial_total,
+                SUM(valor_atual) as valor_atual_total,
+                AVG(valor_inicial - valor_atual) as media_glosa
+            FROM aihs 
+            WHERE competencia = ?
+        `, [competencia]);
         
         res.json({
-            total_cadastradas: total.count,
-            em_processamento: emProcessamento.count,
-            por_status: statusMap,
-            ultimas_aihs: ultimasAIHs,
-            total_glosas: totalGlosas.count,
-            valores: {
-                inicial: valorTotal.inicial || 0,
-                atual: valorTotal.atual || 0
+            competencia_selecionada: competencia,
+            competencias_disponiveis: competenciasDisponiveis.map(c => c.competencia),
+            
+            // Métricas da competência
+            em_processamento_competencia: emProcessamentoCompetencia,
+            finalizadas_competencia: finalizadasCompetencia.count,
+            com_pendencias_competencia: comPendenciasCompetencia.count,
+            total_aihs_competencia: totalAIHsCompetencia.count,
+            
+            // Métricas gerais (desde o início)
+            total_entradas_sus: totalEntradasSUS.count,
+            total_saidas_hospital: totalSaidasHospital.count,
+            total_em_processamento_geral: totalEmProcessamento,
+            
+            // Valores financeiros da competência
+            valores_competencia: {
+                inicial: valoresCompetencia.valor_inicial_total || 0,
+                atual: valoresCompetencia.valor_atual_total || 0,
+                media_glosa: valoresCompetencia.media_glosa || 0
             }
         });
     } catch (err) {
+        console.error('Erro no dashboard:', err);
         res.status(500).json({ error: err.message });
     }
 });
+
+// Helper para obter competência atual
+const getCompetenciaAtual = () => {
+    const hoje = new Date();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const ano = hoje.getFullYear();
+    return `${mes}/${ano}`;
+};
 
 // Buscar AIH
 app.get('/api/aih/:numero', verificarToken, async (req, res) => {
@@ -615,6 +690,7 @@ app.get('/api/relatorios/:tipo/export', verificarToken, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
 
 // Servir SPA
 app.get('*', (req, res) => {
