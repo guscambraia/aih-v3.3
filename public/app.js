@@ -801,7 +801,7 @@ document.getElementById('formMovimentacao').addEventListener('submit', async (e)
             prof_enfermagem: document.getElementById('movProfEnfermagem').value,
             prof_fisioterapia: document.getElementById('movProfFisioterapia').value,
             prof_bucomaxilo: document.getElementById('movProfBucomaxilo').value,
-            observacoes: document.getElementById('movObservacoes').value
+            observacoes: document.getElementById('movObservacoes')?.value || ''
         };
 
         await api(`/aih/${state.aihAtual.id}/movimentacao`, {

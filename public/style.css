@@ -11,13 +11,13 @@
     --primary-dark: #075985;   /* Azul escuro */
     --secondary: #059669;      /* Verde saúde */
     --secondary-dark: #047857; /* Verde escuro */
-    
+
     /* Cores de status - mais suaves */
     --success: #10b981;        /* Verde sucesso */
     --danger: #dc2626;         /* Vermelho alerta */
     --warning: #f59e0b;        /* Amarelo atenção */
     --info: #0ea5e9;          /* Azul informação */
-    
+
     /* Cores neutras - tons de cinza azulado */
     --dark: #1e293b;
     --gray-900: #0f172a;
@@ -31,7 +31,7 @@
     --gray-100: #f1f5f9;
     --light: #f8fafc;
     --white: #ffffff;
-    
+
     /* Sombras mais suaves */
     --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -456,18 +456,18 @@ header h2 {
     .seletor-competencia {
         flex-wrap: wrap;
     }
-    
+
     .competencia-info {
         width: 100%;
         margin-left: 0;
         margin-top: 0.5rem;
     }
-    
+
     .dashboard {
         grid-template-columns: 1fr;
         padding: 1rem;
     }
-    
+
     .resumo-cards {
         grid-template-columns: 1fr;
     }
@@ -576,16 +576,16 @@ header h2 {
         justify-content: flex-start;
         -webkit-overflow-scrolling: touch;
     }
-    
+
     .menu-btn {
         padding: 0.5rem 1rem;
         font-size: 0.875rem;
     }
-    
+
     .menu-btn .icon {
         font-size: 1rem;
     }
-    
+
     /* Mostrar scroll indicator em mobile */
     .menu-principal::after {
         content: '→';
@@ -598,21 +598,21 @@ header h2 {
         pointer-events: none;
         animation: scrollHint 2s ease-in-out infinite;
     }
-    
+
     @keyframes scrollHint {
         0%, 100% { opacity: 0.3; transform: translateY(-50%) translateX(0); }
         50% { opacity: 1; transform: translateY(-50%) translateX(5px); }
     }
-    
+
     /* Remover indicator quando scrollado */
     .menu-principal::-webkit-scrollbar {
         height: 4px;
     }
-    
+
     .menu-principal::-webkit-scrollbar-track {
         background: var(--gray-200);
     }
-    
+
     .menu-principal::-webkit-scrollbar-thumb {
         background: var(--gray-400);
         border-radius: 2px;
@@ -643,16 +643,19 @@ label {
     font-size: 0.875rem;
 }
 
-input, select {
+input, select, textarea {
+    width: 100%;
     padding: 0.75rem;
     border: 1px solid var(--gray-300);
     border-radius: 6px;
     font-size: 1rem;
     transition: all 0.2s;
     background: var(--white);
+    font-family: inherit;
+    resize: vertical;
 }
 
-input:focus, select:focus {
+input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.1);
@@ -994,12 +997,12 @@ tr:last-child {
     .dashboard, .menu-principal {
         grid-template-columns: 1fr;
     }
-    
+
     .container {
         margin: 1rem;
         padding: 1.5rem;
     }
-    
+
     header {
         flex-direction: column;
         gap: 1rem;
@@ -1027,11 +1030,11 @@ tr:last-child {
     body {
         background: white;
     }
-    
+
     header, .menu-principal, .btn-voltar, button {
         display: none;
     }
-    
+
     .container {
         box-shadow: none;
         border: none;
