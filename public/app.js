@@ -54,6 +54,15 @@ const voltarTelaAnterior = () => {
         if (state.telaAnterior === 'telaMovimentacao') {
             carregarDadosMovimentacao();
         }
+        // Se voltando para tela de informações AIH, recarregar AIH atualizada
+        else if (state.telaAnterior === 'telaInfoAIH' && state.aihAtual) {
+            api(`/aih/${state.aihAtual.numero_aih}`)
+                .then(aih => {
+                    state.aihAtual = aih;
+                    mostrarInfoAIH(aih);
+                })
+                .catch(err => console.error('Erro ao recarregar AIH:', err));
+        }
     }
 };
 
