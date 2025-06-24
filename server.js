@@ -253,6 +253,47 @@ app.post('/api/aih', verificarToken, async (req, res) => {
     }
 });
 
+// Obter próxima movimentação possível
+app.get('/api/aih/:id/proxima-movimentacao', verificarToken, async (req, res) => {
+    try {
+        const aihId = req.params.id;
+        
+        // Buscar última movimentação
+        const ultimaMovimentacao = await get(
+            'SELECT tipo FROM movimentacoes WHERE aih_id = ? ORDER BY data_movimentacao DESC LIMIT 1',
+            [aihId]
+        );
+        
+        let proximoTipo, proximaDescricao, explicacao;
+        
+        if (!ultimaMovimentacao) {
+            // Primeira movimentação sempre é entrada SUS
+            proximoTipo = 'entrada_sus';
+            proximaDescricao = 'Entrada na Auditoria SUS';
+            explicacao = 'Esta é a primeira movimentação da AIH. Deve ser registrada como entrada na Auditoria SUS.';
+        } else if (ultimaMovimentacao.tipo === 'entrada_sus') {
+            // Se última foi entrada SUS, próxima deve ser saída hospital
+            proximoTipo = 'saida_hospital';
+            proximaDescricao = 'Saída para Auditoria Hospital';
+            explicacao = 'A última movimentação foi entrada na Auditoria SUS. A próxima deve ser saída para Auditoria Hospital.';
+        } else {
+            // Se última foi saída hospital, próxima deve ser entrada SUS
+            proximoTipo = 'entrada_sus';
+            proximaDescricao = 'Entrada na Auditoria SUS';
+            explicacao = 'A última movimentação foi saída para Hospital. A próxima deve ser entrada na Auditoria SUS.';
+        }
+        
+        res.json({
+            proximo_tipo: proximoTipo,
+            descricao: proximaDescricao,
+            explicacao: explicacao,
+            ultima_movimentacao: ultimaMovimentacao?.tipo || null
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Nova movimentação
 app.post('/api/aih/:id/movimentacao', verificarToken, async (req, res) => {
     try {
@@ -261,6 +302,27 @@ app.post('/api/aih/:id/movimentacao', verificarToken, async (req, res) => {
             tipo, status_aih, valor_conta, competencia,
             prof_medicina, prof_enfermagem, prof_fisioterapia, prof_bucomaxilo, observacoes
         } = req.body;
+        
+        // Validar se o tipo está correto conforme a sequência
+        const ultimaMovimentacao = await get(
+            'SELECT tipo FROM movimentacoes WHERE aih_id = ? ORDER BY data_movimentacao DESC LIMIT 1',
+            [aihId]
+        );
+        
+        let tipoPermitido;
+        if (!ultimaMovimentacao) {
+            tipoPermitido = 'entrada_sus';
+        } else if (ultimaMovimentacao.tipo === 'entrada_sus') {
+            tipoPermitido = 'saida_hospital';
+        } else {
+            tipoPermitido = 'entrada_sus';
+        }
+        
+        if (tipo !== tipoPermitido) {
+            return res.status(400).json({ 
+                error: `Tipo de movimentação inválido. Esperado: ${tipoPermitido}, recebido: ${tipo}` 
+            });
+        }
         
         // Inserir movimentação
         await run(
