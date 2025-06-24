@@ -49,6 +49,11 @@ const voltarTelaPrincipal = () => {
 const voltarTelaAnterior = () => {
     if (state.telaAnterior) {
         mostrarTela(state.telaAnterior);
+        
+        // Se voltando para tela de movimentação, recarregar dados para atualizar glosas
+        if (state.telaAnterior === 'telaMovimentacao') {
+            carregarDadosMovimentacao();
+        }
     }
 };
 
@@ -739,7 +744,20 @@ document.getElementById('formNovaGlosa').addEventListener('submit', async (e) =>
 });
 
 document.getElementById('btnSalvarGlosas').addEventListener('click', () => {
-    voltarTelaAnterior();
+    // Atualizar a AIH atual com as glosas mais recentes
+    if (state.aihAtual) {
+        api(`/aih/${state.aihAtual.numero_aih}`)
+            .then(aih => {
+                state.aihAtual = aih;
+                voltarTelaAnterior();
+            })
+            .catch(err => {
+                console.error('Erro ao atualizar AIH:', err);
+                voltarTelaAnterior();
+            });
+    } else {
+        voltarTelaAnterior();
+    }
 });
 
 // Salvar movimentação
