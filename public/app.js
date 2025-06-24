@@ -630,58 +630,51 @@ document.getElementById('btnNovaMovimentacao').addEventListener('click', () => {
 // Carregue dados necessários para movimentação
 const carregarDadosMovimentacao = async () => {
     try {
-        // 1. Carregar profissionais primeiro
+        // 1. Carregar profissionais
         const profResult = await api('/profissionais');
         const profissionais = profResult.profissionais;
 
-        // 2. Preencher selects de profissionais
-        const especialidades = ['medicina', 'enfermagem', 'fisioterapia', 'bucomaxilo'];
-        especialidades.forEach(esp => {
-            const select = document.getElementById(`movProf${esp.charAt(0).toUpperCase() + esp.slice(1)}`);
-            if (select) {
-                select.innerHTML = `<option value="">Selecione - ${esp.charAt(0).toUpperCase() + esp.slice(1)}</option>`;
-                profissionais
-                    .filter(p => p.especialidade.toLowerCase() === esp.toLowerCase())
-                    .forEach(prof => {
-                        select.innerHTML += `<option value="${prof.nome}">${prof.nome}</option>`;
-                    });
-            }
-        });
-
-        // 3. Pré-selecionar profissionais da última movimentação IMEDIATAMENTE após preencher os selects
+        // 2. Obter profissionais da última movimentação ANTES de preencher os selects
         let profissionaisPreSelecionados = null;
         if (state.aihAtual && state.aihAtual.movimentacoes && state.aihAtual.movimentacoes.length > 0) {
             const movimentacoesOrdenadas = [...state.aihAtual.movimentacoes].sort((a, b) => 
                 new Date(b.data_movimentacao) - new Date(a.data_movimentacao)
             );
             profissionaisPreSelecionados = movimentacoesOrdenadas[0];
-            console.log('Pré-selecionando profissionais da última movimentação:', profissionaisPreSelecionados);
-            
-            // Mapear e aplicar seleções imediatamente
-            const mapeamentoProfissionais = {
-                'movProfMedicina': 'prof_medicina',
-                'movProfEnfermagem': 'prof_enfermagem', 
-                'movProfFisioterapia': 'prof_fisioterapia',
-                'movProfBucomaxilo': 'prof_bucomaxilo'
-            };
-
-            Object.entries(mapeamentoProfissionais).forEach(([selectId, campo]) => {
-                const select = document.getElementById(selectId);
-                const valorProfissional = profissionaisPreSelecionados[campo];
-                
-                if (select && valorProfissional) {
-                    console.log(`Aplicando pré-seleção: ${selectId} = ${valorProfissional}`);
-                    select.value = valorProfissional;
-                    
-                    // Verificar se foi aplicado com sucesso
-                    if (select.value === valorProfissional) {
-                        console.log(`✅ Pré-seleção aplicada com sucesso: ${selectId}`);
-                    } else {
-                        console.warn(`❌ Falha na pré-seleção: ${selectId}, valor não encontrado no select`);
-                    }
-                }
-            });
+            console.log('Profissionais a pré-selecionar:', profissionaisPreSelecionados);
         }
+
+        // 3. Preencher selects COM pré-seleção integrada
+        const especialidades = [
+            { id: 'movProfMedicina', nome: 'Medicina', campo: 'prof_medicina' },
+            { id: 'movProfEnfermagem', nome: 'Enfermagem', campo: 'prof_enfermagem' },
+            { id: 'movProfFisioterapia', nome: 'Fisioterapia', campo: 'prof_fisioterapia' },
+            { id: 'movProfBucomaxilo', nome: 'Bucomaxilo', campo: 'prof_bucomaxilo' }
+        ];
+
+        especialidades.forEach(esp => {
+            const select = document.getElementById(esp.id);
+            if (select) {
+                // Limpar select
+                select.innerHTML = `<option value="">Selecione - ${esp.nome}</option>`;
+                
+                // Adicionar profissionais da especialidade
+                const profsDaEspecialidade = profissionais.filter(p => 
+                    p.especialidade.toLowerCase() === esp.nome.toLowerCase()
+                );
+                
+                profsDaEspecialidade.forEach(prof => {
+                    const selected = (profissionaisPreSelecionados && 
+                                    profissionaisPreSelecionados[esp.campo] === prof.nome) ? 'selected' : '';
+                    select.innerHTML += `<option value="${prof.nome}" ${selected}>${prof.nome}</option>`;
+                });
+
+                // Log da pré-seleção
+                if (profissionaisPreSelecionados && profissionaisPreSelecionados[esp.campo]) {
+                    console.log(`✅ Pré-seleção aplicada: ${esp.id} = ${profissionaisPreSelecionados[esp.campo]}`);
+                }
+            }
+        });
 
         // 4. Carregar próxima movimentação possível
         if (state.aihAtual) {
