@@ -685,6 +685,9 @@ const carregarDadosMovimentacao = async () => {
         // Carregar e exibir glosas existentes (sempre por último)
         await carregarGlosas();
 
+        // Carregar e pré-selecionar profissionais da última movimentação
+        await carregarProfissionaisUltimaMovimentacao();
+
     } catch (err) {
         console.error('Erro ao carregar dados:', err);
     }
@@ -1524,56 +1527,6 @@ const getTipoDescricao = (tipo) => {
     }
 };
 
-if (aih.movimentacoes?.length > 0) {
-            content += `
-            <div class="movimentacoes-section">
-                <h3>📊 Histórico de Movimentações</h3>
-                <div class="sequencia-visual">
-                    ${aih.movimentacoes.map((mov, index) => `
-                        <div class="mov-item ${mov.tipo}">
-                            <div class="mov-numero">${index + 1}</div>
-                            <div class="mov-info">
-                                <strong>${getTipoDescricao(mov.tipo)}</strong>
-                                <small>${new Date(mov.data_movimentacao).toLocaleDateString('pt-BR')}</small>
-                                <span class="status-badge status-${mov.status_aih}">${getStatusDescricao(mov.status_aih)}</span>
-                                ${mov.observacoes ? `<p class="mov-obs">${mov.observacoes}</p>` : ''}
-                            </div>
-                            <div class="mov-valor">R$ ${mov.valor_conta ? mov.valor_conta.toFixed(2) : '0,00'}</div>
-                            ${index < aih.movimentacoes.length - 1 ? '<div class="mov-seta">↓</div>' : ''}
-                        </div>
-                    `).join('')}
-                </div>
-
-                <div class="tabela-movimentacoes" style="margin-top: 2rem;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Tipo</th>
-                                <th>Status</th>
-                                <th>Valor</th>
-                                <th>Competência</th>
-                                <th>Observações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${aih.movimentacoes.map(mov => `
-                                <tr>
-                                    <td>${new Date(mov.data_movimentacao).toLocaleDateString('pt-BR')}</td>
-                                    <td><span class="tipo-badge ${mov.tipo}">${getTipoDescricao(mov.tipo)}</span></td>
-                                    <td><span class="status-badge status-${mov.status_aih}">${getStatusDescricao(mov.status_aih)}</span></td>
-                                    <td>R$ ${mov.valor_conta ? mov.valor_conta.toFixed(2) : '0,00'}</td>
-                                    <td>${mov.competencia || '-'}</td>
-                                    <td class="obs-cell">${mov.observacoes || '-'}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            `;
-        }
-
 // Adiciona a função exportarHistoricoMovimentacoes
 window.exportarHistoricoMovimentacoes = async (formato) => {
     if (!state.aihAtual || !state.aihAtual.movimentacoes) {
@@ -1661,71 +1614,5 @@ const carregarProfissionaisUltimaMovimentacao = async () => {
         }
     } catch (error) {
         console.error('Erro ao carregar e pré-selecionar profissionais da última movimentação:', error);
-    }
-};
-// Ao carregar os dados de movimentação, também carrega os profissionais da última movimentação
-// Modifique a função carregarDadosMovimentacao para chamar carregarProfissionaisUltimaMovimentacao
-const carregarDadosMovimentacao = async () => {
-    try {
-        // Carregar profissionais
-        const profResult = await api('/profissionais');
-        const profissionais = profResult.profissionais;
-
-        // Preencher selects de profissionais
-        const especialidades = ['medicina', 'enfermagem', 'fisioterapia', 'bucomaxilo'];
-        especialidades.forEach(esp => {
-            const select = document.getElementById(`movProf${esp.charAt(0).toUpperCase() + esp.slice(1)}`);
-            if (select) {
-                select.innerHTML = `<option value="">Selecione - ${esp.charAt(0).toUpperCase() + esp.slice(1)}</option>`;
-                profissionais
-                    .filter(p => p.especialidade.toLowerCase() === esp.toLowerCase())
-                    .forEach(prof => {
-                        select.innerHTML += `<option value="${prof.nome}">${prof.nome}</option>`;
-                    });
-            }
-        });
-
-        // Carregar próxima movimentação possível
-        if (state.aihAtual) {
-            const proximaMovResult = await api(`/aih/${state.aihAtual.id}/proxima-movimentacao`);
-
-            // Configurar o tipo de movimentação automaticamente
-            const tipoSelect = document.getElementById('movTipo');
-            if (tipoSelect) {
-                tipoSelect.innerHTML = `<option value="${proximaMovResult.proximo_tipo}">${proximaMovResult.descricao}</option>`;
-                tipoSelect.disabled = true; // Não permite alteração
-            }
-
-            // Exibir explicação
-            const explicacaoDiv = document.getElementById('explicacaoMovimentacao');
-            if (explicacaoDiv) {
-                explicacaoDiv.innerHTML = `
-                    <div class="info-box">
-                        <h4>📝 Próxima Movimentação</h4>
-                        <p><strong>${proximaMovResult.descricao}</strong></p>
-                        <p class="explicacao">${proximaMovResult.explicacao}</p>
-                        ${proximaMovResult.ultima_movimentacao ?
-                            `<p class="historico">Última movimentação: ${proximaMovResult.ultima_movimentacao === 'entrada_sus' ? 'Entrada na Auditoria SUS' : 'Saída para Auditoria Hospital'}</p>` :
-                            '<p class="historico">Esta será a primeira movimentação desta AIH.</p>'
-                        }
-                    </div>
-                `;
-            }
-        }
-
-        // Preencher dados da AIH atual
-        if (state.aihAtual) {
-            document.getElementById('movCompetencia').value = state.aihAtual.competencia;
-            document.getElementById('movValor').value = state.aihAtual.valor_atual;
-        }
-
-        // Carregar e exibir glosas existentes (sempre por último)
-        await carregarGlosas();
-
-        // Carregar e pré-selecionar profissionais da última movimentação
-        await carregarProfissionaisUltimaMovimentacao();
-
-    } catch (err) {
-        console.error('Erro ao carregar dados:', err);
     }
 };
