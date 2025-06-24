@@ -52,7 +52,10 @@ const voltarTelaAnterior = () => {
 
         // Se voltando para tela de movimentação, recarregar dados para atualizar glosas
         if (state.telaAnterior === 'telaMovimentacao') {
-            carregarDadosMovimentacao();
+            // Usar setTimeout para garantir que a tela foi renderizada
+            setTimeout(() => {
+                carregarDadosMovimentacao();
+            }, 100);
         }
         // Se voltando para tela de informações AIH, recarregar AIH atualizada
         else if (state.telaAnterior === 'telaInfoAIH' && state.aihAtual) {
@@ -657,14 +660,14 @@ const carregarDadosMovimentacao = async () => {
             }
         }
 
-        // Carregar e exibir glosas existentes
-        await carregarGlosas();
-
         // Preencher dados da AIH atual
         if (state.aihAtual) {
             document.getElementById('movCompetencia').value = state.aihAtual.competencia;
             document.getElementById('movValor').value = state.aihAtual.valor_atual;
         }
+
+        // Carregar e exibir glosas existentes (sempre por último)
+        await carregarGlosas();
 
     } catch (err) {
         console.error('Erro ao carregar dados:', err);
@@ -734,7 +737,13 @@ document.getElementById('btnGerenciarGlosas').addEventListener('click', () => {
 });
 
 const carregarGlosas = async () => {
+    if (!state.aihAtual || !state.aihAtual.id) {
+        console.error('AIH atual não definida');
+        return;
+    }
+
     const container = document.getElementById('glosasAtuais');
+    const listaGlosasMovimentacao = document.getElementById('listaGlosas');
 
     try {
         const response = await api(`/aih/${state.aihAtual.id}/glosas`);
@@ -744,22 +753,66 @@ const carregarGlosas = async () => {
         await carregarTiposGlosa();
         await carregarProfissionaisSelects();
 
-        container.innerHTML = response.glosas.map(g => `
-            <div class="glosa-item">
-                <div>
-                    <strong>${g.linha}</strong> - ${g.tipo}
-                    <br>
-                    <span style="color: #64748b; font-size: 0.875rem;">
-                        Por: ${g.profissional} | Quantidade: ${g.quantidade || 1}
-                    </span>
+        // Atualizar na tela de pendências
+        if (container) {
+            container.innerHTML = response.glosas.map(g => `
+                <div class="glosa-item">
+                    <div>
+                        <strong>${g.linha}</strong> - ${g.tipo}
+                        <br>
+                        <span style="color: #64748b; font-size: 0.875rem;">
+                            Por: ${g.profissional} | Quantidade: ${g.quantidade || 1}
+                        </span>
+                    </div>
+                    <button onclick="removerGlosa(${g.id})" class="btn-danger" style="padding: 0.5rem 1rem;">
+                        Remover
+                    </button>
                 </div>
-                <button onclick="removerGlosa(${g.id})" class="btn-danger" style="padding: 0.5rem 1rem;">
-                    Remover
-                </button>
-            </div>
-        `).join('') || '<p>Nenhuma glosa ativa</p>';
+            `).join('') || '<p>Nenhuma pendência/glosa ativa</p>';
+        }
+
+        // Atualizar também na tela de movimentação
+        if (listaGlosasMovimentacao) {
+            if (response.glosas.length > 0) {
+                listaGlosasMovimentacao.innerHTML = `
+                    <div style="background: #fef3c7; padding: 1rem; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                        <h4 style="color: #92400e; margin-bottom: 0.75rem;">
+                            ⚠️ Pendências/Glosas Ativas (${response.glosas.length})
+                        </h4>
+                        ${response.glosas.map(g => `
+                            <div style="background: white; margin-bottom: 0.5rem; padding: 0.75rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>${g.linha}</strong> - ${g.tipo}
+                                    <br>
+                                    <span style="color: #64748b; font-size: 0.875rem;">
+                                        Por: ${g.profissional} | Qtd: ${g.quantidade || 1}
+                                    </span>
+                                </div>
+                                <span style="color: #92400e; font-size: 0.75rem;">
+                                    ${new Date(g.criado_em).toLocaleDateString('pt-BR')}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                listaGlosasMovimentacao.innerHTML = `
+                    <div style="background: #d1fae5; padding: 1rem; border-radius: 8px; border-left: 4px solid #10b981;">
+                        <p style="color: #064e3b; margin: 0;">
+                            ✅ Nenhuma pendência/glosa ativa
+                        </p>
+                    </div>
+                `;
+            }
+        }
     } catch (err) {
         console.error('Erro ao carregar glosas:', err);
+        if (container) {
+            container.innerHTML = '<p style="color: #ef4444;">Erro ao carregar glosas</p>';
+        }
+        if (listaGlosasMovimentacao) {
+            listaGlosasMovimentacao.innerHTML = '<p style="color: #ef4444;">Erro ao carregar glosas</p>';
+        }
     }
 };
 
@@ -805,27 +858,39 @@ document.getElementById('formNovaGlosa').addEventListener('submit', async (e) =>
             body: JSON.stringify(dados)
         });
 
+        // Limpar formulário
         document.getElementById('formNovaGlosa').reset();
         document.getElementById('glosaQuantidade').value = 1;
-        carregarGlosas();
+        
+        // Recarregar glosas imediatamente
+        await carregarGlosas();
+        
+        // Mostrar confirmação
+        alert('Pendência/Glosa adicionada com sucesso!');
     } catch (err) {
-        alert('Erro ao adicionar glosa: ' + err.message);
+        alert('Erro ao adicionar pendência/glosa: ' + err.message);
     }
 });
 
-document.getElementById('btnSalvarGlosas').addEventListener('click', () => {
-    // Atualizar a AIH atual com as glosas mais recentes
-    if (state.aihAtual) {
-        api(`/aih/${state.aihAtual.numero_aih}`)
-            .then(aih => {
-                state.aihAtual = aih;
-                voltarTelaAnterior();
-            })
-            .catch(err => {
-console.error('Erro ao atualizar AIH:', err);
-                voltarTelaAnterior();
-            });
-    } else {
+document.getElementById('btnSalvarGlosas').addEventListener('click', async () => {
+    try {
+        // Atualizar a AIH atual com as glosas mais recentes
+        if (state.aihAtual) {
+            const aihAtualizada = await api(`/aih/${state.aihAtual.numero_aih}`);
+            state.aihAtual = aihAtualizada;
+        }
+        
+        // Voltar para tela anterior
+        voltarTelaAnterior();
+        
+        // Se voltou para movimentação, forçar atualização das glosas
+        if (state.telaAnterior === 'telaMovimentacao') {
+            setTimeout(async () => {
+                await carregarGlosas();
+            }, 200);
+        }
+    } catch (err) {
+        console.error('Erro ao atualizar AIH:', err);
         voltarTelaAnterior();
     }
 });
