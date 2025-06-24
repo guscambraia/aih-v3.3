@@ -750,6 +750,88 @@ app.get('/api/aih/:id/movimentacoes/export/:formato', verificarToken, async (req
     }
 });
 
+// Métricas avançadas para dashboard
+app.get('/api/metricas-avancadas', verificarToken, async (req, res) => {
+    try {
+        // Tempo médio de processamento por competência
+        const tempoMedio = await get(`
+            SELECT 
+                competencia,
+                AVG(JULIANDAY(ultima_movimentacao) - JULIANDAY(primeira_movimentacao)) as tempo_medio_dias
+            FROM (
+                SELECT 
+                    a.competencia,
+                    MIN(m.data_movimentacao) as primeira_movimentacao,
+                    MAX(m.data_movimentacao) as ultima_movimentacao
+                FROM aihs a
+                JOIN movimentacoes m ON a.id = m.aih_id
+                WHERE a.status IN (1, 4)
+                GROUP BY a.id
+            )
+            GROUP BY competencia
+            ORDER BY competencia DESC
+            LIMIT 6
+        `);
+
+        // Tendência de glosas por mês
+        const tendenciaGlosas = await all(`
+            SELECT 
+                strftime('%Y-%m', g.criado_em) as mes,
+                COUNT(*) as total_glosas,
+                COUNT(DISTINCT g.aih_id) as aihs_com_glosa
+            FROM glosas g
+            WHERE g.ativa = 1
+            GROUP BY mes
+            ORDER BY mes DESC
+            LIMIT 12
+        `);
+
+        // Produtividade por profissional
+        const produtividadeProfissionais = await all(`
+            SELECT 
+                COALESCE(prof_medicina, prof_enfermagem, prof_fisioterapia, prof_bucomaxilo) as profissional,
+                COUNT(DISTINCT aih_id) as aihs_auditadas,
+                COUNT(*) as total_movimentacoes,
+                AVG(valor_conta) as valor_medio
+            FROM movimentacoes
+            WHERE prof_medicina IS NOT NULL 
+               OR prof_enfermagem IS NOT NULL 
+               OR prof_fisioterapia IS NOT NULL 
+               OR prof_bucomaxilo IS NOT NULL
+            GROUP BY profissional
+            HAVING COUNT(DISTINCT aih_id) >= 3
+            ORDER BY aihs_auditadas DESC
+        `);
+
+        // AIHs por faixa de valor
+        const distribuicaoValores = await all(`
+            SELECT 
+                CASE 
+                    WHEN valor_atual < 500 THEN 'Até R$ 500'
+                    WHEN valor_atual < 1000 THEN 'R$ 500 - R$ 1.000'
+                    WHEN valor_atual < 2000 THEN 'R$ 1.000 - R$ 2.000'
+                    WHEN valor_atual < 5000 THEN 'R$ 2.000 - R$ 5.000'
+                    ELSE 'Acima de R$ 5.000'
+                END as faixa_valor,
+                COUNT(*) as quantidade,
+                AVG(valor_atual) as valor_medio
+            FROM aihs
+            GROUP BY faixa_valor
+            ORDER BY valor_medio
+        `);
+
+        res.json({
+            tempo_medio_competencia: tempoMedio,
+            tendencia_glosas: tendenciaGlosas,
+            produtividade_profissionais: produtividadeProfissionais,
+            distribuicao_valores: distribuicaoValores
+        });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Exportar relatórios
 app.get('/api/relatorios/:tipo/export', verificarToken, async (req, res) => {
     try {

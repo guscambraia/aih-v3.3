@@ -47,6 +47,34 @@ const voltarTelaPrincipal = () => {
 };
 
 const voltarTelaAnterior = () => {
+
+// Função para criar gráfico de status simples
+const criarGraficoStatus = (dados) => {
+    const statusData = [
+        { label: 'Finalizadas', valor: dados.finalizadas_competencia, cor: '#10b981' },
+        { label: 'Com Pendências', valor: dados.com_pendencias_competencia, cor: '#f59e0b' },
+        { label: 'Em Processamento', valor: dados.em_processamento_competencia, cor: '#3b82f6' }
+    ];
+    
+    const total = statusData.reduce((sum, item) => sum + item.valor, 0);
+    
+    return statusData.map(item => {
+        const porcentagem = total > 0 ? ((item.valor / total) * 100).toFixed(1) : 0;
+        return `
+            <div class="barra-status" style="margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span style="font-size: 0.875rem; font-weight: 500;">${item.label}</span>
+                    <span style="font-size: 0.875rem; color: #64748b;">${item.valor} (${porcentagem}%)</span>
+                </div>
+                <div style="background: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div style="background: ${item.cor}; height: 100%; width: ${porcentagem}%; 
+                               transition: width 0.8s ease; border-radius: 4px;"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+};
+
     if (state.telaAnterior) {
         mostrarTela(state.telaAnterior);
 
@@ -286,7 +314,7 @@ const carregarDashboard = async (competenciaSelecionada = null) => {
             </div>
         `;
 
-        // Adicionar seção de resumo financeiro
+        // Adicionar seção de resumo financeiro com gráfico
         const resumoFinanceiro = document.createElement('div');
         resumoFinanceiro.className = 'resumo-financeiro';
         resumoFinanceiro.innerHTML = `
@@ -307,6 +335,14 @@ const carregarDashboard = async (competenciaSelecionada = null) => {
                 <div class="resumo-card">
                     <span class="resumo-label">Total de AIHs</span>
                     <span class="resumo-valor">${dados.total_aihs_competencia}</span>
+                </div>
+            </div>
+            
+            <!-- Gráfico de Status -->
+            <div class="grafico-status">
+                <h4>📊 Distribuição por Status</h4>
+                <div class="grafico-barras">
+                    ${criarGraficoStatus(dados)}
                 </div>
             </div>
         `;
