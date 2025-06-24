@@ -180,25 +180,25 @@
         <div id="telaPendencias" class="tela">
             <header>
                 <button class="btn-voltar" onclick="voltarTelaAnterior()">← Voltar</button>
-                <h2>Gerenciar Glosas/Pendências</h2>
+                <h2>Gerenciar Pendências/Glosas</h2>
             </header>
             <div class="container">
                 <div id="glosasAtuais"></div>
                 
-                <h3>Adicionar Nova Glosa</h3>
+                <h3>Adicionar Nova Pendência/Glosa</h3>
                 <form id="formNovaGlosa">
-                    <input type="text" id="glosaLinha" placeholder="Linha da glosa" required>
+                    <input type="text" id="glosaLinha" placeholder="Linha da pendência/glosa" required>
                     <select id="glosaTipo" required>
-                        <option value="">Selecione o tipo de glosa</option>
+                        <option value="">Selecione o tipo de pendência/glosa</option>
                     </select>
                     <select id="glosaProfissional" required>
                         <option value="">Selecione o profissional</option>
                     </select>
                     <input type="number" id="glosaQuantidade" placeholder="Quantidade" min="1" value="1" required>
-                    <button type="submit">Adicionar Glosa</button>
+                    <button type="submit">Adicionar Pendência/Glosa</button>
                 </form>
                 
-                <button id="btnSalvarGlosas" class="btn-primary">Salvar e Voltar</button>
+                <button id="btnSalvarGlosas" class="btn-primary">Salvar Pendências e Voltar</button>
             </div>
         </div>
 
@@ -285,10 +285,10 @@
                 </div>
                 
                 <div class="config-section">
-                    <h3>Gerenciar Tipos de Glosa</h3>
+                    <h3>Gerenciar Tipos de Pendências/Glosas</h3>
                     <div id="listaTiposGlosa"></div>
                     <form id="formNovoTipoGlosa">
-                        <input type="text" id="tipoGlosaDescricao" placeholder="Descrição do tipo de glosa" required>
+                        <input type="text" id="tipoGlosaDescricao" placeholder="Descrição do tipo de pendência/glosa" required>
                         <button type="submit">Adicionar Tipo</button>
                     </form>
                 </div>

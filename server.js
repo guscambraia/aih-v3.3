@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const XLSX = require('xlsx');
 const { initDB, run, get, all } = require('./database');
 const { verificarToken, login, cadastrarUsuario } = require('./auth');
 
@@ -240,9 +241,9 @@ app.post('/api/aih', verificarToken, async (req, res) => {
         
         // Primeira movimentação (entrada SUS)
         await run(
-            `INSERT INTO movimentacoes (aih_id, tipo, usuario_id, valor_conta, competencia, status_aih) 
-             VALUES (?, 'entrada_sus', ?, ?, ?, 3)`,
-            [result.id, req.usuario.id, valor_inicial, competencia]
+            `INSERT INTO movimentacoes (aih_id, tipo, usuario_id, valor_conta, competencia, status_aih, observacoes) 
+             VALUES (?, 'entrada_sus', ?, ?, ?, 3, ?)`,
+            [result.id, req.usuario.id, valor_inicial, competencia, 'Entrada inicial no sistema']
         );
         
         await logAcao(req.usuario.id, `Cadastrou AIH ${numero_aih}`);
@@ -258,17 +259,17 @@ app.post('/api/aih/:id/movimentacao', verificarToken, async (req, res) => {
         const aihId = req.params.id;
         const {
             tipo, status_aih, valor_conta, competencia,
-            prof_medicina, prof_enfermagem, prof_fisioterapia, prof_bucomaxilo
+            prof_medicina, prof_enfermagem, prof_fisioterapia, prof_bucomaxilo, observacoes
         } = req.body;
         
         // Inserir movimentação
         await run(
             `INSERT INTO movimentacoes 
              (aih_id, tipo, usuario_id, valor_conta, competencia, 
-              prof_medicina, prof_enfermagem, prof_fisioterapia, prof_bucomaxilo, status_aih) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              prof_medicina, prof_enfermagem, prof_fisioterapia, prof_bucomaxilo, status_aih, observacoes) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [aihId, tipo, req.usuario.id, valor_conta, competencia,
-             prof_medicina, prof_enfermagem, prof_fisioterapia, prof_bucomaxilo, status_aih]
+             prof_medicina, prof_enfermagem, prof_fisioterapia, prof_bucomaxilo, status_aih, observacoes]
         );
         
         // Atualizar AIH
@@ -475,17 +476,26 @@ app.get('/api/export/:formato', verificarToken, async (req, res) => {
             res.setHeader('Content-Disposition', 'attachment; filename=export-aih.csv');
             res.send(csv);
         } else if (req.params.formato === 'excel') {
-            // Criar formato Excel simples (CSV com separador de tabulação)
-            const excel = [
-                'Número AIH\tValor Inicial\tValor Atual\tStatus\tCompetência\tTotal Glosas\tAtendimentos\tCriado em',
-                ...aihs.map(a => 
-                    `${a.numero_aih}\t${a.valor_inicial}\t${a.valor_atual}\t${getStatusExcel(a.status)}\t${a.competencia}\t${a.total_glosas}\t${a.atendimentos || ''}\t${a.criado_em}`
-                )
-            ].join('\n');
+            // Criar workbook Excel real (XLSX)
+            const worksheet = XLSX.utils.json_to_sheet(aihs.map(a => ({
+                'Número AIH': a.numero_aih,
+                'Valor Inicial': a.valor_inicial,
+                'Valor Atual': a.valor_atual,
+                'Status': getStatusExcel(a.status),
+                'Competência': a.competencia,
+                'Total Glosas/Pendências': a.total_glosas,
+                'Atendimentos': a.atendimentos || '',
+                'Criado em': new Date(a.criado_em).toLocaleDateString('pt-BR')
+            })));
             
-            res.setHeader('Content-Type', 'application/vnd.ms-excel');
-            res.setHeader('Content-Disposition', 'attachment; filename=export-aih.xls');
-            res.send(excel);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'AIHs');
+            
+            const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+            
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', 'attachment; filename=export-aih.xlsx');
+            res.send(buffer);
         }
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -690,16 +700,16 @@ app.get('/api/relatorios/:tipo/export', verificarToken, async (req, res) => {
             return res.status(404).json({ error: 'Nenhum dado encontrado' });
         }
         
-        // Criar Excel (formato TSV)
-        const headers = Object.keys(dados[0]);
-        const excel = [
-            headers.join('\t'),
-            ...dados.map(row => headers.map(h => row[h] || '').join('\t'))
-        ].join('\n');
+        // Criar Excel real (XLSX)
+        const worksheet = XLSX.utils.json_to_sheet(dados);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, tipo.charAt(0).toUpperCase() + tipo.slice(1));
         
-        res.setHeader('Content-Type', 'application/vnd.ms-excel');
-        res.setHeader('Content-Disposition', `attachment; filename=${nomeArquivo}.xls`);
-        res.send(excel);
+        const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=${nomeArquivo}.xlsx`);
+        res.send(buffer);
         
     } catch (err) {
         res.status(500).json({ error: err.message });

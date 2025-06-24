@@ -55,9 +55,15 @@ const initDB = () => {
             prof_fisioterapia TEXT,
             prof_bucomaxilo TEXT,
             status_aih INTEGER NOT NULL,
+            observacoes TEXT,
             FOREIGN KEY (aih_id) REFERENCES aihs(id),
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
         )`);
+        
+        // Adicionar coluna observacoes se não existir (para bancos existentes)
+        db.run(`ALTER TABLE movimentacoes ADD COLUMN observacoes TEXT`, (err) => {
+            // Ignora erro se coluna já existe
+        });
 
         // Glosas
         db.run(`CREATE TABLE IF NOT EXISTS glosas (
@@ -102,11 +108,21 @@ const initDB = () => {
             ('Falta de documentação'),
             ('Divergência de valores')`);
 
-        // Criar índices
+        // Criar índices para otimização
         db.run(`CREATE INDEX IF NOT EXISTS idx_aih_numero ON aihs(numero_aih)`);
         db.run(`CREATE INDEX IF NOT EXISTS idx_aih_status ON aihs(status)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_aih_competencia ON aihs(competencia)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_aih_valor_atual ON aihs(valor_atual)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_aih_criado_em ON aihs(criado_em)`);
         db.run(`CREATE INDEX IF NOT EXISTS idx_movimentacoes_aih ON movimentacoes(aih_id)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_movimentacoes_tipo ON movimentacoes(tipo)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_movimentacoes_competencia ON movimentacoes(competencia)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_movimentacoes_data ON movimentacoes(data_movimentacao)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_glosas_aih ON glosas(aih_id)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_glosas_ativa ON glosas(ativa)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_atendimentos_aih ON atendimentos(aih_id)`);
         db.run(`CREATE INDEX IF NOT EXISTS idx_logs_usuario ON logs_acesso(usuario_id)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_logs_data ON logs_acesso(data_hora)`);
         
         console.log('Banco de dados inicializado');
     });

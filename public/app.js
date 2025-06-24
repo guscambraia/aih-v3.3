@@ -17,15 +17,15 @@ const api = async (endpoint, options = {}) => {
             ...options.headers
         }
     };
-    
+
     try {
         const response = await fetch(`/api${endpoint}`, config);
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.error || 'Erro na requisição');
         }
-        
+
         return data;
     } catch (err) {
         console.error('Erro API:', err);
@@ -49,7 +49,7 @@ const voltarTelaPrincipal = () => {
 const voltarTelaAnterior = () => {
     if (state.telaAnterior) {
         mostrarTela(state.telaAnterior);
-        
+
         // Se voltando para tela de movimentação, recarregar dados para atualizar glosas
         if (state.telaAnterior === 'telaMovimentacao') {
             carregarDadosMovimentacao();
@@ -63,30 +63,30 @@ const mostrarModal = (titulo, mensagem) => {
         const modalTitulo = document.getElementById('modalTitulo');
         const modalMensagem = document.getElementById('modalMensagem');
         const modal = document.getElementById('modal');
-        
+
         if (!modalTitulo || !modalMensagem || !modal) {
             console.error('Elementos do modal não encontrados');
             resolve(false);
             return;
         }
-        
+
         modalTitulo.textContent = titulo;
         modalMensagem.textContent = mensagem;
         modal.classList.add('ativo');
-        
+
         const btnSim = document.getElementById('modalBtnSim');
         const btnNao = document.getElementById('modalBtnNao');
-        
+
         const fecharModal = (resultado) => {
             modal.classList.remove('ativo');
             btnSim.removeEventListener('click', simHandler);
             btnNao.removeEventListener('click', naoHandler);
             resolve(resultado);
         };
-        
+
         const simHandler = () => fecharModal(true);
         const naoHandler = () => fecharModal(false);
-        
+
         btnSim.addEventListener('click', simHandler);
         btnNao.addEventListener('click', naoHandler);
     });
@@ -95,20 +95,20 @@ const mostrarModal = (titulo, mensagem) => {
 // Login
 document.getElementById('formLogin').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     try {
         const nome = document.getElementById('loginUsuario').value;
         const senha = document.getElementById('loginSenha').value;
-        
+
         const result = await api('/login', {
             method: 'POST',
             body: JSON.stringify({ nome, senha })
         });
-        
+
         state.token = result.token;
         state.usuario = result.usuario;
         localStorage.setItem('token', result.token);
-        
+
         document.getElementById('nomeUsuario').textContent = result.usuario.nome;
         mostrarTela('telaPrincipal');
         carregarDashboard();
@@ -120,13 +120,13 @@ document.getElementById('formLogin').addEventListener('submit', async (e) => {
 // Cadastrar usuário
 document.getElementById('linkCadastrar').addEventListener('click', async (e) => {
     e.preventDefault();
-    
+
     const nome = prompt('Nome de usuário:');
     if (!nome) return;
-    
+
     const senha = prompt('Senha:');
     if (!senha) return;
-    
+
     try {
         await api('/cadastrar', {
             method: 'POST',
@@ -172,7 +172,7 @@ const animarNumero = (elementId, valorFinal) => {
     const duracao = 1000; // 1 segundo
     const incremento = (valorFinal - valorInicial) / (duracao / 16);
     let valorAtual = valorInicial;
-    
+
     const timer = setInterval(() => {
         valorAtual += incremento;
         if ((incremento > 0 && valorAtual >= valorFinal) || 
@@ -189,10 +189,10 @@ const carregarDashboard = async (competenciaSelecionada = null) => {
     try {
         // Se não foi passada competência, usar a atual
         const competencia = competenciaSelecionada || getCompetenciaAtual();
-        
+
         // Buscar dados do dashboard com a competência
         const dados = await api(`/dashboard?competencia=${competencia}`);
-        
+
         // Criar/atualizar seletor de competência
         let seletorContainer = document.querySelector('.seletor-competencia-container');
         if (!seletorContainer) {
@@ -202,7 +202,7 @@ const carregarDashboard = async (competenciaSelecionada = null) => {
             seletorContainer.className = 'seletor-competencia-container';
             dashboardContainer.parentNode.insertBefore(seletorContainer, dashboardContainer);
         }
-        
+
         // Sempre atualizar o conteúdo do seletor
         seletorContainer.innerHTML = `
             <div class="seletor-competencia">
@@ -215,7 +215,7 @@ const carregarDashboard = async (competenciaSelecionada = null) => {
                 <span class="competencia-info">📅 Visualizando dados de ${competencia}</span>
             </div>
         `;
-        
+
         // Atualizar cards do dashboard
         const dashboard = document.querySelector('.dashboard');
         dashboard.innerHTML = `
@@ -227,7 +227,7 @@ const carregarDashboard = async (competenciaSelecionada = null) => {
                 <p class="stat-subtitle">AIHs em análise em ${competencia}</p>
                 <p class="stat-detail">Entradas SUS - Saídas Hospital</p>
             </div>
-            
+
             <!-- Card 2: Finalizadas na Competência -->
             <div class="stat-card success">
                 <div class="stat-icon">✅</div>
@@ -236,7 +236,7 @@ const carregarDashboard = async (competenciaSelecionada = null) => {
                 <p class="stat-subtitle">AIHs concluídas em ${competencia}</p>
                 <p class="stat-detail">Status 1 e 4</p>
             </div>
-            
+
             <!-- Card 3: Com Pendências na Competência -->
             <div class="stat-card warning">
                 <div class="stat-icon">⚠️</div>
@@ -245,7 +245,7 @@ const carregarDashboard = async (competenciaSelecionada = null) => {
                 <p class="stat-subtitle">AIHs com glosas em ${competencia}</p>
                 <p class="stat-detail">Status 2 e 3</p>
             </div>
-            
+
             <!-- Card 4: Total Geral em Processamento -->
             <div class="stat-card info">
                 <div class="stat-icon">🏥</div>
@@ -254,7 +254,7 @@ const carregarDashboard = async (competenciaSelecionada = null) => {
                 <p class="stat-subtitle">Desde o início do sistema</p>
                 <p class="stat-detail">Total: ${dados.total_entradas_sus} entradas - ${dados.total_saidas_hospital} saídas</p>
             </div>
-            
+
             <!-- Card 5: Total Finalizadas (Histórico Geral) -->
             <div class="stat-card success" style="border-left: 4px solid #10b981;">
                 <div class="stat-icon">🎯</div>
@@ -263,7 +263,7 @@ const carregarDashboard = async (competenciaSelecionada = null) => {
                 <p class="stat-subtitle">Desde o início do sistema</p>
                 <p class="stat-detail">AIHs concluídas (Status 1 e 4)</p>
             </div>
-            
+
             <!-- Card 6: Total Geral Cadastradas -->
             <div class="stat-card" style="border-left: 4px solid #6366f1;">
                 <div class="stat-icon">📈</div>
@@ -273,7 +273,7 @@ const carregarDashboard = async (competenciaSelecionada = null) => {
                 <p class="stat-detail">Todas as AIHs do sistema</p>
             </div>
         `;
-        
+
         // Adicionar seção de resumo financeiro
         const resumoFinanceiro = document.createElement('div');
         resumoFinanceiro.className = 'resumo-financeiro';
@@ -298,7 +298,7 @@ const carregarDashboard = async (competenciaSelecionada = null) => {
                 </div>
             </div>
         `;
-        
+
         // Adicionar após o dashboard
         const dashboardContainer = document.querySelector('.dashboard');
         const resumoExistente = document.querySelector('.resumo-financeiro');
@@ -306,10 +306,10 @@ const carregarDashboard = async (competenciaSelecionada = null) => {
             resumoExistente.remove();
         }
         dashboardContainer.parentNode.insertBefore(resumoFinanceiro, dashboardContainer.nextSibling);
-        
+
         // Animar números (opcional)
         animarNumeros();
-        
+
     } catch (err) {
         console.error('Erro ao carregar dashboard:', err);
         // Mostrar mensagem de erro no dashboard
@@ -329,7 +329,7 @@ const animarNumeros = () => {
         const valorFinal = parseInt(elemento.textContent);
         let valorAtual = 0;
         const incremento = valorFinal / 30;
-        
+
         const timer = setInterval(() => {
             valorAtual += incremento;
             if (valorAtual >= valorFinal) {
@@ -344,11 +344,11 @@ const animarNumeros = () => {
 // Mostrar informações da AIH
 const mostrarInfoAIH = (aih) => {
     const content = document.getElementById('infoAIHContent');
-    
+
     // Calcular diferença de valor
     const diferencaValor = aih.valor_inicial - aih.valor_atual;
     const percentualDiferenca = ((diferencaValor / aih.valor_inicial) * 100).toFixed(1);
-    
+
     content.innerHTML = `
         <div class="info-card">
             <h3>📋 AIH ${aih.numero_aih}</h3>
@@ -373,7 +373,7 @@ const mostrarInfoAIH = (aih) => {
                 </div>
             </div>
         </div>
-        
+
         <div style="margin-top: 2rem;">
             <h4 style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
                 📊 Histórico de Movimentações
@@ -398,7 +398,7 @@ const mostrarInfoAIH = (aih) => {
                         if (mov.prof_enfermagem) profissionais.push(`Enf: ${mov.prof_enfermagem}`);
                         if (mov.prof_fisioterapia) profissionais.push(`Fis: ${mov.prof_fisioterapia}`);
                         if (mov.prof_bucomaxilo) profissionais.push(`Buco: ${mov.prof_bucomaxilo}`);
-                        
+
                         return `
                             <tr>
                                 <td>${new Date(mov.data_movimentacao).toLocaleDateString('pt-BR')}</td>
@@ -417,7 +417,7 @@ const mostrarInfoAIH = (aih) => {
                 </tbody>
             </table>
         </div>
-        
+
         ${aih.glosas.length > 0 ? `
             <div style="margin-top: 2rem; background: #fef3c7; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #f59e0b;">
                 <h4 style="color: #92400e; margin-bottom: 1rem;">
@@ -441,7 +441,7 @@ const mostrarInfoAIH = (aih) => {
             </div>
         ` : ''}
     `;
-    
+
     mostrarTela('telaInfoAIH');
 };
 
@@ -457,7 +457,7 @@ document.getElementById('btnBuscarAIH').addEventListener('click', () => {
 document.getElementById('btnBackup').addEventListener('click', async () => {
     const modal = document.getElementById('modal');
     const modalContent = modal.querySelector('.modal-content');
-    
+
     modalContent.innerHTML = `
         <h3>🗄️ Backup e Exportação</h3>
         <p>Escolha uma opção:</p>
@@ -498,7 +498,7 @@ document.getElementById('btnBackup').addEventListener('click', async () => {
             </button>
         </div>
     `;
-    
+
     modal.classList.add('ativo');
 });
 
@@ -511,25 +511,25 @@ document.getElementById('btnConfiguracoes').addEventListener('click', () => {
 // Buscar AIH
 document.getElementById('formBuscarAIH').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const numero = document.getElementById('numeroBuscarAIH').value;
-    
+
     try {
         const aih = await api(`/aih/${numero}`);
         state.aihAtual = aih;
-        
+
         if (aih.status === 1 || aih.status === 4) {
             const continuar = await mostrarModal(
                 'AIH Finalizada',
                 'Esta AIH está finalizada. É uma reassinatura/reapresentação?'
             );
-            
+
             if (!continuar) {
                 document.getElementById('numeroBuscarAIH').value = '';
                 return;
             }
         }
-        
+
         mostrarInfoAIH(aih);
     } catch (err) {
         if (err.message.includes('não encontrada')) {
@@ -555,16 +555,16 @@ document.getElementById('btnAddAtendimento').addEventListener('click', () => {
 
 document.getElementById('formCadastroAIH').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const atendimentos = Array.from(document.querySelectorAll('.atendimento-input'))
         .map(input => input.value)
         .filter(val => val);
-    
+
     if (atendimentos.length === 0) {
         alert('Informe pelo menos um número de atendimento');
         return;
     }
-    
+
     try {
         const dados = {
             numero_aih: document.getElementById('cadastroNumeroAIH').value,
@@ -572,14 +572,14 @@ document.getElementById('formCadastroAIH').addEventListener('submit', async (e) 
             competencia: document.getElementById('cadastroCompetencia').value,
             atendimentos
         };
-        
+
         const result = await api('/aih', {
             method: 'POST',
             body: JSON.stringify(dados)
         });
-        
+
         alert('AIH cadastrada com sucesso!');
-        
+
         // Buscar a AIH recém-cadastrada
         const aih = await api(`/aih/${dados.numero_aih}`);
         state.aihAtual = aih;
@@ -601,15 +601,15 @@ document.getElementById('btnNovaMovimentacao').addEventListener('click', () => {
 
 const carregarDadosMovimentacao = async () => {
     if (!state.aihAtual) return;
-    
+
     // Preencher campos com dados atuais
     document.getElementById('movStatus').value = state.aihAtual.status;
     document.getElementById('movCompetencia').value = state.aihAtual.competencia || getCompetenciaAtual();
     document.getElementById('movValor').value = state.aihAtual.valor_atual;
-    
+
     // Carregar profissionais nos selects
     await carregarProfissionaisSelects();
-    
+
     // Carregar glosas
     const listaGlosas = document.getElementById('listaGlosas');
     listaGlosas.innerHTML = state.aihAtual.glosas.map(g => `
@@ -624,7 +624,7 @@ const carregarProfissionaisSelects = async () => {
     try {
         const response = await api('/profissionais');
         const profissionais = response.profissionais;
-        
+
         // Agrupar por especialidade
         const porEspecialidade = {};
         profissionais.forEach(p => {
@@ -633,7 +633,7 @@ const carregarProfissionaisSelects = async () => {
             }
             porEspecialidade[p.especialidade].push(p);
         });
-        
+
         // Preencher selects de movimentação
         const selects = {
             'movProfMedicina': 'Medicina',
@@ -641,7 +641,7 @@ const carregarProfissionaisSelects = async () => {
             'movProfFisioterapia': 'Fisioterapia',
             'movProfBucomaxilo': 'Bucomaxilo'
         };
-        
+
         Object.entries(selects).forEach(([selectId, especialidade]) => {
             const select = document.getElementById(selectId);
             if (select) {
@@ -651,7 +651,7 @@ const carregarProfissionaisSelects = async () => {
                 });
             }
         });
-        
+
         // Preencher select de pesquisa
         const pesquisaProf = document.getElementById('pesquisaProfissional');
         if (pesquisaProf) {
@@ -660,7 +660,7 @@ const carregarProfissionaisSelects = async () => {
                 pesquisaProf.innerHTML += `<option value="${prof.nome}">${prof.nome} - ${prof.especialidade}</option>`;
             });
         }
-        
+
         // Preencher select de glosas
         const glosaProf = document.getElementById('glosaProfissional');
         if (glosaProf) {
@@ -683,15 +683,15 @@ document.getElementById('btnGerenciarGlosas').addEventListener('click', () => {
 
 const carregarGlosas = async () => {
     const container = document.getElementById('glosasAtuais');
-    
+
     try {
         const response = await api(`/aih/${state.aihAtual.id}/glosas`);
         state.glosasPendentes = response.glosas;
-        
+
         // Carregar tipos de glosa e profissionais para os selects
         await carregarTiposGlosa();
         await carregarProfissionaisSelects();
-        
+
         container.innerHTML = response.glosas.map(g => `
             <div class="glosa-item">
                 <div>
@@ -739,7 +739,7 @@ window.removerGlosa = async (id) => {
 // Nova glosa
 document.getElementById('formNovaGlosa').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     try {
         const dados = {
             linha: document.getElementById('glosaLinha').value,
@@ -747,12 +747,12 @@ document.getElementById('formNovaGlosa').addEventListener('submit', async (e) =>
             profissional: document.getElementById('glosaProfissional').value,
             quantidade: parseInt(document.getElementById('glosaQuantidade').value) || 1
         };
-        
+
         await api(`/aih/${state.aihAtual.id}/glosas`, {
             method: 'POST',
             body: JSON.stringify(dados)
         });
-        
+
         document.getElementById('formNovaGlosa').reset();
         document.getElementById('glosaQuantidade').value = 1;
         carregarGlosas();
@@ -781,16 +781,16 @@ document.getElementById('btnSalvarGlosas').addEventListener('click', () => {
 // Salvar movimentação
 document.getElementById('formMovimentacao').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     if (state.glosasPendentes && state.glosasPendentes.length > 0) {
         const continuar = await mostrarModal(
             'Aviso',
             'Existem glosas/pendências nesta AIH. Deseja continuar sem revisar?'
         );
-        
+
         if (!continuar) return;
     }
-    
+
     try {
         const dados = {
             tipo: document.getElementById('movTipo').value,
@@ -800,16 +800,17 @@ document.getElementById('formMovimentacao').addEventListener('submit', async (e)
             prof_medicina: document.getElementById('movProfMedicina').value,
             prof_enfermagem: document.getElementById('movProfEnfermagem').value,
             prof_fisioterapia: document.getElementById('movProfFisioterapia').value,
-            prof_bucomaxilo: document.getElementById('movProfBucomaxilo').value
+            prof_bucomaxilo: document.getElementById('movProfBucomaxilo').value,
+            observacoes: document.getElementById('movObservacoes').value
         };
-        
+
         await api(`/aih/${state.aihAtual.id}/movimentacao`, {
             method: 'POST',
             body: JSON.stringify(dados)
         });
-        
+
         alert('Movimentação registrada com sucesso!');
-        
+
         // Recarregar AIH
         const aih = await api(`/aih/${state.aihAtual.numero_aih}`);
         state.aihAtual = aih;
@@ -822,10 +823,10 @@ document.getElementById('formMovimentacao').addEventListener('submit', async (e)
 // Pesquisa avançada
 document.getElementById('formPesquisa').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const status = Array.from(document.querySelectorAll('#formPesquisa input[type="checkbox"]:checked'))
         .map(cb => parseInt(cb.value));
-    
+
     const filtros = {
         numero_aih: document.getElementById('pesquisaNumeroAIH').value,
         status,
@@ -836,27 +837,27 @@ document.getElementById('formPesquisa').addEventListener('submit', async (e) => 
         valor_max: document.getElementById('pesquisaValorMax').value,
         profissional: document.getElementById('pesquisaProfissional').value
     };
-    
+
     // Remover filtros vazios
     Object.keys(filtros).forEach(key => {
         if (!filtros[key] || (Array.isArray(filtros[key]) && filtros[key].length === 0)) {
             delete filtros[key];
         }
     });
-    
+
     try {
         const response = await api('/pesquisar', {
             method: 'POST',
             body: JSON.stringify({ filtros })
         });
-        
+
         const container = document.getElementById('resultadosPesquisa');
-        
+
         if (response.resultados.length === 0) {
             container.innerHTML = '<p style="text-align: center; color: #64748b; margin-top: 2rem;">Nenhum resultado encontrado</p>';
             return;
         }
-        
+
         container.innerHTML = `
             <h3 style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
                 <span>📊 Resultados Encontrados</span>
@@ -864,7 +865,7 @@ document.getElementById('formPesquisa').addEventListener('submit', async (e) => 
                     ${response.resultados.length} AIHs
                 </span>
             </h3>
-            
+
             <div style="display: grid; gap: 1rem; margin-bottom: 2rem;">
                 ${response.resultados.map(r => `
                     <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
@@ -888,7 +889,7 @@ document.getElementById('formPesquisa').addEventListener('submit', async (e) => 
                     </div>
                 `).join('')}
             </div>
-            
+
             <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                 <button onclick="exportarResultados('csv')" class="btn-success">
                     📄 Exportar CSV
@@ -931,11 +932,11 @@ window.fazerBackup = async () => {
                 'Authorization': `Bearer ${state.token}`
             }
         });
-        
+
         if (!response.ok) {
             throw new Error('Erro ao fazer backup');
         }
-        
+
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -945,7 +946,7 @@ window.fazerBackup = async () => {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        
+
         document.getElementById('modal').classList.remove('ativo');
     } catch (err) {
         alert('Erro ao fazer backup: ' + err.message);
@@ -960,14 +961,14 @@ window.exportarDados = async (formato) => {
                 'Authorization': `Bearer ${state.token}`
             }
         });
-        
+
         if (!response.ok) {
             throw new Error('Erro ao exportar dados');
         }
-        
+
         let filename = `export-aih-${new Date().toISOString().split('T')[0]}`;
         let blob;
-        
+
         if (formato === 'json') {
             const data = await response.json();
             blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -979,7 +980,7 @@ window.exportarDados = async (formato) => {
             blob = await response.blob();
             filename += '.csv';
         }
-        
+
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -988,7 +989,7 @@ window.exportarDados = async (formato) => {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        
+
         // Fechar modal se estiver aberto
         const modal = document.getElementById('modal');
         if (modal.classList.contains('ativo')) {
@@ -1004,7 +1005,7 @@ const carregarProfissionais = async () => {
     try {
         const response = await api('/profissionais');
         const container = document.getElementById('listaProfissionais');
-        
+
         container.innerHTML = response.profissionais.map(p => `
             <div class="glosa-item">
                 <span>${p.nome} - ${p.especialidade}</span>
@@ -1018,7 +1019,7 @@ const carregarProfissionais = async () => {
 
 window.removerProfissional = async (id) => {
     if (!confirm('Deseja remover este profissional?')) return;
-    
+
     try {
         await api(`/profissionais/${id}`, { method: 'DELETE' });
         carregarProfissionais();
@@ -1029,18 +1030,18 @@ window.removerProfissional = async (id) => {
 
 document.getElementById('formNovoProfissional').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     try {
         const dados = {
             nome: document.getElementById('profNome').value,
             especialidade: document.getElementById('profEspecialidade').value
         };
-        
+
         await api('/profissionais', {
             method: 'POST',
             body: JSON.stringify(dados)
         });
-        
+
         document.getElementById('formNovoProfissional').reset();
         carregarProfissionais();
     } catch (err) {
@@ -1053,7 +1054,7 @@ const carregarTiposGlosaConfig = async () => {
     try {
         const response = await api('/tipos-glosa');
         const container = document.getElementById('listaTiposGlosa');
-        
+
         container.innerHTML = response.tipos.map(t => `
             <div class="glosa-item">
                 <span>${t.descricao}</span>
@@ -1067,7 +1068,7 @@ const carregarTiposGlosaConfig = async () => {
 
 window.removerTipoGlosa = async (id) => {
     if (!confirm('Deseja remover este tipo de glosa?')) return;
-    
+
     try {
         await api(`/tipos-glosa/${id}`, { method: 'DELETE' });
         carregarTiposGlosaConfig();
@@ -1078,17 +1079,17 @@ window.removerTipoGlosa = async (id) => {
 
 document.getElementById('formNovoTipoGlosa').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     try {
         const dados = {
             descricao: document.getElementById('tipoGlosaDescricao').value
         };
-        
+
         await api('/tipos-glosa', {
             method: 'POST',
             body: JSON.stringify(dados)
         });
-        
+
         document.getElementById('formNovoTipoGlosa').reset();
         carregarTiposGlosaConfig();
     } catch (err) {
@@ -1106,9 +1107,9 @@ window.gerarRelatorio = async (tipo) => {
     try {
         const response = await api(`/relatorios/${tipo}`);
         const container = document.getElementById('resultadoRelatorio');
-        
+
         let conteudo = '';
-        
+
         switch(tipo) {
             case 'acessos':
                 conteudo = `
@@ -1140,7 +1141,7 @@ window.gerarRelatorio = async (tipo) => {
                     </div>
                 `;
                 break;
-                
+
             case 'glosas-profissional':
                 conteudo = `
                     <div class="relatorio-content">
@@ -1171,7 +1172,7 @@ window.gerarRelatorio = async (tipo) => {
                     </div>
                 `;
                 break;
-                
+
             case 'aihs-profissional':
                 conteudo = `
                     <div class="relatorio-content">
@@ -1202,7 +1203,7 @@ window.gerarRelatorio = async (tipo) => {
                     </div>
                 `;
                 break;
-                
+
             case 'aprovacoes':
                 const dados = response.resultado[0];
                 const total = dados.total || 1;
@@ -1239,7 +1240,7 @@ window.gerarRelatorio = async (tipo) => {
                     </div>
                 `;
                 break;
-                
+
             case 'tipos-glosa':
                 conteudo = `
                     <div class="relatorio-content">
@@ -1270,7 +1271,7 @@ window.gerarRelatorio = async (tipo) => {
                     </div>
                 `;
                 break;
-                
+
             case 'analise-preditiva':
                 const pred = response.resultado;
                 conteudo = `
@@ -1284,7 +1285,7 @@ window.gerarRelatorio = async (tipo) => {
                                 </p>
                                 <p style="color: #64748b;">Média de dias para finalizar AIHs</p>
                             </div>
-                            
+
                             <div class="info-card">
                                 <h4>Valor Médio de Glosas</h4>
                                 <p style="font-size: 2rem; font-weight: bold; color: var(--danger);">
@@ -1292,7 +1293,7 @@ window.gerarRelatorio = async (tipo) => {
                                 </p>
                                 <p style="color: #64748b;">Valor médio perdido por AIH com glosa</p>
                             </div>
-                            
+
                             <div class="info-card">
                                 <h4>Tendência de Glosas (Últimos 6 meses)</h4>
                                 <div style="display: flex; gap: 1rem; align-items: flex-end; height: 100px; margin-top: 1rem;">
@@ -1311,7 +1312,7 @@ window.gerarRelatorio = async (tipo) => {
                                     `).join('')}
                                 </div>
                             </div>
-                            
+
                             <div class="info-card">
                                 <h4>Previsão</h4>
                                 <p>${pred.previsao}</p>
@@ -1321,10 +1322,10 @@ window.gerarRelatorio = async (tipo) => {
                 `;
                 break;
         }
-        
+
         container.innerHTML = conteudo;
         container.scrollIntoView({ behavior: 'smooth' });
-        
+
     } catch (err) {
         alert('Erro ao gerar relatório: ' + err.message);
     }
@@ -1337,11 +1338,11 @@ window.exportarRelatorio = async (tipo) => {
                 'Authorization': `Bearer ${state.token}`
             }
         });
-        
+
         if (!response.ok) {
             throw new Error('Erro ao exportar relatório');
         }
-        
+
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1369,7 +1370,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         mostrarTela('telaLogin');
     }
-    
+
     // Preencher competência padrão nos formulários
     const camposCompetencia = ['cadastroCompetencia', 'movCompetencia', 'pesquisaCompetencia'];
     camposCompetencia.forEach(id => {
