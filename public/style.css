@@ -183,10 +183,10 @@ body {
 }
 
 .login-footer p {
-    color: var(--white);
+    color: var(--primary);
     font-size: 0.875rem;
     margin: 0.25rem 0;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
 }
 
 .login-footer p:first-child {
@@ -1540,10 +1540,10 @@ tr:last-child {
 }
 
 .login-footer p {
-    color: var(--white);
+    color: var(--primary);
     font-size: 0.875rem;
     margin: 0.25rem 0;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
 }
 
 .login-footer p:first-child {
@@ -1554,4 +1554,39 @@ tr:last-child {
 .login-footer p:last-child {
     font-size: 0.8rem;
     opacity: 0.9;
+}
+
+/* Footer da tela principal */
+.main-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--white);
+    border-top: 1px solid var(--gray-200);
+    padding: 1rem 2rem;
+    text-align: center;
+    z-index: 100;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.main-footer p {
+    color: var(--primary);
+    font-size: 0.75rem;
+    margin: 0.125rem 0;
+}
+
+.main-footer p:first-child {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.main-footer p:last-child {
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+/* Ajustar padding-bottom do body quando o footer está visível */
+#telaPrincipal {
+    padding-bottom: 80px;
 }
