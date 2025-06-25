@@ -10,17 +10,15 @@ const db = new sqlite3.Database(dbPath, (err) => {
 });
 
 // Inicializar tabelas
-const initDB = async () => {
-    try {
-        db.serialize(async () => {
+const initDB = () => {
+    db.serialize(() => {
         // Usuarios
         db.run(`CREATE TABLE IF NOT EXISTS usuarios (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nome TEXT UNIQUE NOT NULL,
-                matricula TEXT,
-                senha_hash TEXT NOT NULL,
-                criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
-            )`);
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT UNIQUE NOT NULL,
+            senha_hash TEXT NOT NULL,
+            criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
 
         // AIHs
         db.run(`CREATE TABLE IF NOT EXISTS aihs (
@@ -61,14 +59,9 @@ const initDB = async () => {
             FOREIGN KEY (aih_id) REFERENCES aihs(id),
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
         )`);
-
+        
         // Adicionar coluna observacoes se não existir (para bancos existentes)
         db.run(`ALTER TABLE movimentacoes ADD COLUMN observacoes TEXT`, (err) => {
-            // Ignora erro se coluna já existe
-        });
-
-        // Adicionar coluna matricula se não existir (para bancos existentes)
-        db.run(`ALTER TABLE usuarios ADD COLUMN matricula TEXT`, (err) => {
             // Ignora erro se coluna já existe
         });
 
@@ -130,24 +123,9 @@ const initDB = async () => {
         db.run(`CREATE INDEX IF NOT EXISTS idx_atendimentos_aih ON atendimentos(aih_id)`);
         db.run(`CREATE INDEX IF NOT EXISTS idx_logs_usuario ON logs_acesso(usuario_id)`);
         db.run(`CREATE INDEX IF NOT EXISTS idx_logs_data ON logs_acesso(data_hora)`);
-
-        // Criar usuário administrador padrão se não existir
-        const adminExiste = await get('SELECT id FROM usuarios WHERE nome = ?', ['admin']);
-        if (!adminExiste) {
-            const bcrypt = require('bcryptjs');
-            const senhaHash = await bcrypt.hash('admin', 10);
-            await run(
-                'INSERT INTO usuarios (nome, matricula, senha_hash) VALUES (?, ?, ?)',
-                ['admin', 'ADM001', senhaHash]
-            );
-            console.log('Usuário administrador criado: admin/admin');
-        }
-
+        
         console.log('Banco de dados inicializado');
     });
-    } catch (err) {
-        console.error('Erro ao inicializar banco:', err);
-    }
 };
 
 // Funções auxiliares
