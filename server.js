@@ -920,7 +920,268 @@ app.get('/api/aih/:id/movimentacoes/export/:formato', verificarToken, async (req
     }
 });
 
-// Exportar relatórios
+// Exportar relatórios com filtros por período
+app.post('/api/relatorios/:tipo/export', verificarToken, async (req, res) => {
+    try {
+        const tipo = req.params.tipo;
+        const { data_inicio, data_fim, competencia } = req.body;
+        let dados = [];
+        let nomeArquivo = `relatorio-${tipo}-${new Date().toISOString().split('T')[0]}`;
+        
+        // Construir filtros de período
+        let filtroWhere = '';
+        let params = [];
+        
+        if (competencia) {
+            filtroWhere = ' AND competencia = ?';
+            params.push(competencia);
+            nomeArquivo += `-${competencia.replace('/', '-')}`;
+        } else if (data_inicio && data_fim) {
+            filtroWhere = ' AND DATE(criado_em) BETWEEN ? AND ?';
+            params.push(data_inicio, data_fim);
+            nomeArquivo += `-${data_inicio}-a-${data_fim}`;
+        } else if (data_inicio) {
+            filtroWhere = ' AND DATE(criado_em) >= ?';
+            params.push(data_inicio);
+            nomeArquivo += `-a-partir-${data_inicio}`;
+        } else if (data_fim) {
+            filtroWhere = ' AND DATE(criado_em) <= ?';
+            params.push(data_fim);
+            nomeArquivo += `-ate-${data_fim}`;
+        }
+        
+        switch(tipo) {
+            case 'tipos-glosa-periodo':
+                dados = await all(`
+                    SELECT 
+                        g.tipo as 'Tipo de Glosa',
+                        COUNT(*) as 'Total Ocorrencias', 
+                        SUM(g.quantidade) as 'Quantidade Total',
+                        GROUP_CONCAT(DISTINCT g.profissional) as 'Profissionais Envolvidos'
+                    FROM glosas g
+                    JOIN aihs a ON g.aih_id = a.id
+                    WHERE g.ativa = 1 ${filtroWhere}
+                    GROUP BY g.tipo
+                    ORDER BY COUNT(*) DESC
+                `, params);
+                break;
+                
+            case 'aihs-profissional-periodo':
+                let sqlAihs = `
+                    SELECT 
+                        CASE 
+                            WHEN m.prof_medicina IS NOT NULL THEN m.prof_medicina
+                            WHEN m.prof_enfermagem IS NOT NULL THEN m.prof_enfermagem
+                            WHEN m.prof_fisioterapia IS NOT NULL THEN m.prof_fisioterapia
+                            WHEN m.prof_bucomaxilo IS NOT NULL THEN m.prof_bucomaxilo
+                        END as 'Profissional',
+                        CASE 
+                            WHEN m.prof_medicina IS NOT NULL THEN 'Medicina'
+                            WHEN m.prof_enfermagem IS NOT NULL THEN 'Enfermagem'
+                            WHEN m.prof_fisioterapia IS NOT NULL THEN 'Fisioterapia'
+                            WHEN m.prof_bucomaxilo IS NOT NULL THEN 'Bucomaxilo'
+                        END as 'Especialidade',
+                        COUNT(DISTINCT m.aih_id) as 'Total AIHs Auditadas',
+                        COUNT(*) as 'Total Movimentacoes'
+                    FROM movimentacoes m
+                    JOIN aihs a ON m.aih_id = a.id
+                    WHERE (m.prof_medicina IS NOT NULL 
+                       OR m.prof_enfermagem IS NOT NULL 
+                       OR m.prof_fisioterapia IS NOT NULL 
+                       OR m.prof_bucomaxilo IS NOT NULL)
+                `;
+                
+                if (competencia) {
+                    sqlAihs += ' AND m.competencia = ?';
+                } else if (data_inicio && data_fim) {
+                    sqlAihs += ' AND DATE(m.data_movimentacao) BETWEEN ? AND ?';
+                } else if (data_inicio) {
+                    sqlAihs += ' AND DATE(m.data_movimentacao) >= ?';
+                } else if (data_fim) {
+                    sqlAihs += ' AND DATE(m.data_movimentacao) <= ?';
+                }
+                
+                sqlAihs += ` GROUP BY Profissional, Especialidade
+                            ORDER BY COUNT(DISTINCT m.aih_id) DESC`;
+                
+                dados = await all(sqlAihs, params);
+                break;
+                
+            case 'glosas-profissional-periodo':
+                dados = await all(`
+                    SELECT 
+                        g.profissional as 'Profissional',
+                        COUNT(*) as 'Total Glosas',
+                        SUM(g.quantidade) as 'Quantidade Total',
+                        GROUP_CONCAT(DISTINCT g.tipo) as 'Tipos de Glosa',
+                        COUNT(DISTINCT g.tipo) as 'Tipos Diferentes'
+                    FROM glosas g
+                    JOIN aihs a ON g.aih_id = a.id
+                    WHERE g.ativa = 1 ${filtroWhere}
+                    GROUP BY g.profissional
+                    ORDER BY COUNT(*) DESC
+                `, params);
+                break;
+                
+            case 'valores-glosas-periodo':
+                const valoresGlosas = await get(`
+                    SELECT 
+                        COUNT(DISTINCT a.id) as aihs_com_glosas,
+                        SUM(a.valor_inicial) as valor_inicial_total,
+                        SUM(a.valor_atual) as valor_atual_total,
+                        SUM(a.valor_inicial - a.valor_atual) as total_glosas,
+                        AVG(a.valor_inicial - a.valor_atual) as media_glosa_por_aih,
+                        MIN(a.valor_inicial - a.valor_atual) as menor_glosa,
+                        MAX(a.valor_inicial - a.valor_atual) as maior_glosa
+                    FROM aihs a
+                    WHERE EXISTS (SELECT 1 FROM glosas g WHERE g.aih_id = a.id AND g.ativa = 1)
+                    ${filtroWhere}
+                `, params);
+                
+                dados = [{
+                    'AIHs com Glosas': valoresGlosas.aihs_com_glosas || 0,
+                    'Valor Inicial Total': `R$ ${(valoresGlosas.valor_inicial_total || 0).toFixed(2)}`,
+                    'Valor Atual Total': `R$ ${(valoresGlosas.valor_atual_total || 0).toFixed(2)}`,
+                    'Total de Glosas': `R$ ${(valoresGlosas.total_glosas || 0).toFixed(2)}`,
+                    'Média por AIH': `R$ ${(valoresGlosas.media_glosa_por_aih || 0).toFixed(2)}`,
+                    'Menor Glosa': `R$ ${(valoresGlosas.menor_glosa || 0).toFixed(2)}`,
+                    'Maior Glosa': `R$ ${(valoresGlosas.maior_glosa || 0).toFixed(2)}`
+                }];
+                break;
+                
+            case 'estatisticas-periodo':
+                const stats = await get(`
+                    SELECT 
+                        COUNT(*) as total_aihs,
+                        SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as aprovacao_direta,
+                        SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) as aprovacao_indireta,
+                        SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) as em_discussao,
+                        SUM(CASE WHEN status = 4 THEN 1 ELSE 0 END) as finalizada_pos_discussao,
+                        AVG(valor_inicial) as valor_medio_inicial,
+                        AVG(valor_atual) as valor_medio_atual,
+                        SUM(valor_inicial) as valor_total_inicial,
+                        SUM(valor_atual) as valor_total_atual
+                    FROM aihs a
+                    WHERE 1=1 ${filtroWhere}
+                `, params);
+                
+                const totalGlosasPeriodo = await get(`
+                    SELECT COUNT(*) as total_glosas,
+                           COUNT(DISTINCT aih_id) as aihs_com_glosas
+                    FROM glosas g
+                    JOIN aihs a ON g.aih_id = a.id
+                    WHERE g.ativa = 1 ${filtroWhere}
+                `, params);
+                
+                dados = [{
+                    'Total AIHs': stats.total_aihs || 0,
+                    'Aprovação Direta': stats.aprovacao_direta || 0,
+                    'Aprovação Indireta': stats.aprovacao_indireta || 0,
+                    'Em Discussão': stats.em_discussao || 0,
+                    'Finalizada Pós-Discussão': stats.finalizada_pos_discussao || 0,
+                    'Total Glosas': totalGlosasPeriodo.total_glosas || 0,
+                    'AIHs com Glosas': totalGlosasPeriodo.aihs_com_glosas || 0,
+                    'Valor Médio Inicial': `R$ ${(stats.valor_medio_inicial || 0).toFixed(2)}`,
+                    'Valor Médio Atual': `R$ ${(stats.valor_medio_atual || 0).toFixed(2)}`,
+                    'Valor Total Inicial': `R$ ${(stats.valor_total_inicial || 0).toFixed(2)}`,
+                    'Valor Total Atual': `R$ ${(stats.valor_total_atual || 0).toFixed(2)}`,
+                    'Diferença Total': `R$ ${((stats.valor_total_inicial || 0) - (stats.valor_total_atual || 0)).toFixed(2)}`
+                }];
+                break;
+                
+            // Relatórios originais (sem filtros)
+            case 'acessos':
+                dados = await all(`
+                    SELECT u.nome as Usuario, COUNT(l.id) as 'Total Acessos', 
+                           MAX(l.data_hora) as 'Ultimo Acesso'
+                    FROM logs_acesso l
+                    JOIN usuarios u ON l.usuario_id = u.id
+                    WHERE l.acao = 'Login'
+                    GROUP BY u.id
+                    ORDER BY COUNT(l.id) DESC
+                `);
+                break;
+                
+            case 'glosas-profissional':
+                dados = await all(`
+                    SELECT profissional as Profissional, 
+                           COUNT(*) as 'Total Glosas',
+                           SUM(quantidade) as 'Quantidade Total'
+                    FROM glosas
+                    WHERE ativa = 1
+                    GROUP BY profissional
+                    ORDER BY COUNT(*) DESC
+                `);
+                break;
+                
+            case 'aihs-profissional':
+                dados = await all(`
+                    SELECT 
+                        COALESCE(prof_medicina, prof_enfermagem, prof_fisioterapia, prof_bucomaxilo) as Profissional,
+                        COUNT(DISTINCT aih_id) as 'Total AIHs',
+                        COUNT(*) as 'Total Movimentacoes'
+                    FROM movimentacoes
+                    WHERE prof_medicina IS NOT NULL 
+                       OR prof_enfermagem IS NOT NULL 
+                       OR prof_fisioterapia IS NOT NULL 
+                       OR prof_bucomaxilo IS NOT NULL
+                    GROUP BY Profissional
+                    ORDER BY COUNT(DISTINCT aih_id) DESC
+                `);
+                break;
+                
+            case 'aprovacoes':
+                const aprovacoes = await get(`
+                    SELECT 
+                        SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as aprovacao_direta,
+                        SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) as aprovacao_indireta,
+                        SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) as em_discussao,
+                        SUM(CASE WHEN status = 4 THEN 1 ELSE 0 END) as finalizada_pos_discussao,
+                        COUNT(*) as total
+                    FROM aihs
+                `);
+                dados = [
+                    { Tipo: 'Aprovação Direta', Quantidade: aprovacoes.aprovacao_direta, Percentual: ((aprovacoes.aprovacao_direta/aprovacoes.total)*100).toFixed(1) + '%' },
+                    { Tipo: 'Aprovação Indireta', Quantidade: aprovacoes.aprovacao_indireta, Percentual: ((aprovacoes.aprovacao_indireta/aprovacoes.total)*100).toFixed(1) + '%' },
+                    { Tipo: 'Em Discussão', Quantidade: aprovacoes.em_discussao, Percentual: ((aprovacoes.em_discussao/aprovacoes.total)*100).toFixed(1) + '%' },
+                    { Tipo: 'Finalizada Pós-Discussão', Quantidade: aprovacoes.finalizada_pos_discussao, Percentual: ((aprovacoes.finalizada_pos_discussao/aprovacoes.total)*100).toFixed(1) + '%' }
+                ];
+                break;
+                
+            case 'tipos-glosa':
+                dados = await all(`
+                    SELECT tipo as 'Tipo de Glosa', 
+                           COUNT(*) as 'Total Ocorrencias', 
+                           SUM(quantidade) as 'Quantidade Total'
+                    FROM glosas
+                    WHERE ativa = 1
+                    GROUP BY tipo
+                    ORDER BY COUNT(*) DESC
+                `);
+                break;
+        }
+        
+        if (dados.length === 0) {
+            return res.status(404).json({ error: 'Nenhum dado encontrado para o período selecionado' });
+        }
+        
+        // Criar Excel real (XLS compatível)
+        const worksheet = XLSX.utils.json_to_sheet(dados);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, tipo.charAt(0).toUpperCase() + tipo.slice(1));
+        
+        const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xls' });
+        
+        res.setHeader('Content-Type', 'application/vnd.ms-excel');
+        res.setHeader('Content-Disposition', `attachment; filename=${nomeArquivo}.xls`);
+        res.send(buffer);
+        
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Exportar relatórios originais (sem filtros) - mantém compatibilidade
 app.get('/api/relatorios/:tipo/export', verificarToken, async (req, res) => {
     try {
         const tipo = req.params.tipo;

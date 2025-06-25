@@ -1836,11 +1836,46 @@ window.limparFiltrosRelatorio = () => {
 
 window.exportarRelatorio = async (tipo) => {
     try {
-        const response = await fetch(`/api/relatorios/${tipo}/export`, {
-            headers: {
-                'Authorization': `Bearer ${state.token}`
-            }
-        });
+        // Capturar filtros de período para relatórios filtrados
+        const dataInicio = document.getElementById('relatorioDataInicio')?.value || '';
+        const dataFim = document.getElementById('relatorioDataFim')?.value || '';
+        const competencia = document.getElementById('relatorioCompetencia')?.value || '';
+        
+        const filtros = {
+            data_inicio: dataInicio,
+            data_fim: dataFim,
+            competencia: competencia
+        };
+        
+        // Verificar se é um relatório que suporta filtros por período
+        const relatoriosComFiltros = [
+            'tipos-glosa-periodo', 
+            'aihs-profissional-periodo', 
+            'glosas-profissional-periodo', 
+            'valores-glosas-periodo', 
+            'estatisticas-periodo'
+        ];
+        
+        let response;
+        
+        if (relatoriosComFiltros.includes(tipo)) {
+            // Usar POST para relatórios com filtros
+            response = await fetch(`/api/relatorios/${tipo}/export`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${state.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(filtros)
+            });
+        } else {
+            // Usar GET para relatórios sem filtros (compatibilidade)
+            response = await fetch(`/api/relatorios/${tipo}/export`, {
+                headers: {
+                    'Authorization': `Bearer ${state.token}`
+                }
+            });
+        }
 
         if (!response.ok) {
             throw new Error('Erro ao exportar relatório');
@@ -1849,8 +1884,18 @@ window.exportarRelatorio = async (tipo) => {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
+        
+        // Nome do arquivo com período se aplicável
+        let nomeArquivo = `relatorio-${tipo}-${new Date().toISOString().split('T')[0]}`;
+        if (competencia) {
+            nomeArquivo += `-${competencia.replace('/', '-')}`;
+        } else if (dataInicio && dataFim) {
+            nomeArquivo += `-${dataInicio}-a-${dataFim}`;
+        }
+        nomeArquivo += '.xls';
+        
         a.href = url;
-        a.download = `relatorio-${tipo}-${new Date().toISOString().split('T')[0]}.xls`;
+        a.download = nomeArquivo;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
