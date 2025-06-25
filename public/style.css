@@ -1098,16 +1098,18 @@ tr:last-child {
 
 /* Relatórios */
 .filtros-relatorio {
-    background: #f8fafc;
+    background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
     padding: 1.5rem;
     border-radius: 12px;
     margin-bottom: 2rem;
-    border-left: 4px solid #6366f1;
+    border-left: 4px solid #3b82f6;
+    box-shadow: 0 2px 10px rgba(59, 130, 246, 0.1);
 }
 
 .filtros-relatorio h3 {
     margin-bottom: 1rem;
-    color: #374151;
+    color: #1e40af;
+    font-weight: 600;
 }
 
 .secao-relatorios {
@@ -1116,9 +1118,11 @@ tr:last-child {
 
 .secao-relatorios h3 {
     margin-bottom: 1.5rem;
-    color: #374151;
-    border-bottom: 2px solid #e5e7eb;
-    padding-bottom: 0.5rem;
+    color: #1e40af;
+    border-bottom: 2px solid #3b82f6;
+    padding-bottom: 0.75rem;
+    font-weight: 600;
+    font-size: 1.25rem;
 }
 
 .relatorios-grid {
@@ -1128,39 +1132,102 @@ tr:last-child {
     margin-bottom: 2rem;
 }
 
-.relatorio-card {
-    background: var(--white);
+.relatorio-btn {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border: 2px solid #93c5fd;
     padding: 2rem;
-    border-radius: 8px;
-    border: 1px solid var(--gray-200);
-    box-shadow: var(--shadow-sm);
+    border-radius: 12px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
+    text-align: center;
+    text-decoration: none;
+    display: block;
+    position: relative;
+    overflow: hidden;
+}
+
+.relatorio-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.5s;
+}
+
+.relatorio-btn:hover::before {
+    left: 100%;
+}
+
+.relatorio-btn:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.2);
+    border-color: #60a5fa;
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+}
+
+.relatorio-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 1rem;
+    filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3));
+}
+
+.relatorio-btn h3 {
+    color: #1e40af;
+    margin-bottom: 0.75rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(30, 64, 175, 0.1);
+}
+
+.relatorio-btn p {
+    color: #1e3a8a;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    font-weight: 500;
+}
+
+/* Card específico para relatórios antigos - manter compatibilidade */
+.relatorio-card {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border: 2px solid #93c5fd;
+    padding: 2rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
     text-align: center;
 }
 
 .relatorio-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
-    border-color: var(--primary);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.2);
+    border-color: #60a5fa;
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
 }
 
 .relatorio-card .icon {
-    font-size: 2.5rem;
+    font-size: 3rem;
     display: block;
     margin-bottom: 1rem;
-    opacity: 0.8;
+    filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3));
 }
 
 .relatorio-card h3 {
-    color: var(--gray-800);
-    margin-bottom: 0.5rem;
+    color: #1e40af;
+    margin-bottom: 0.75rem;
     font-size: 1.125rem;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(30, 64, 175, 0.1);
 }
 
 .relatorio-card p {
-    color: var(--gray-600);
+    color: #1e3a8a;
     font-size: 0.875rem;
+    line-height: 1.5;
+    font-weight: 500;
 }
 
 /* Ajustes responsivos */
