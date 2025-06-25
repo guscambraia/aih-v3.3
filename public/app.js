@@ -581,11 +581,26 @@ document.getElementById('btnAddAtendimento').addEventListener('click', () => {
     container.appendChild(input);
 });
 
+// Cadastrar AIH
 document.getElementById('formCadastroAIH').addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    const numeroAIH = document.getElementById('cadastroNumeroAIH').value.trim();
+
+    // Validação do número da AIH (deve ter 13 dígitos)
+    if (numeroAIH.length !== 13) {
+        const continuar = await mostrarModal(
+            'Atenção - Número da AIH',
+            `O número da AIH informado tem ${numeroAIH.length} dígitos, mas o padrão são 13 dígitos. Deseja continuar o cadastro mesmo assim?`
+        );
+
+        if (!continuar) {
+            return;
+        }
+    }
+
     const atendimentos = Array.from(document.querySelectorAll('.atendimento-input'))
-        .map(input => input.value)
+        .map(input => input.value.trim())
         .filter(val => val);
 
     if (atendimentos.length === 0) {
@@ -595,7 +610,7 @@ document.getElementById('formCadastroAIH').addEventListener('submit', async (e) 
 
     try {
         const dados = {
-            numero_aih: document.getElementById('cadastroNumeroAIH').value,
+            numero_aih: numeroAIH,
             valor_inicial: parseFloat(document.getElementById('cadastroValor').value),
             competencia: document.getElementById('cadastroCompetencia').value,
             atendimentos
@@ -657,12 +672,12 @@ const carregarDadosMovimentacao = async () => {
             if (select) {
                 // Limpar select
                 select.innerHTML = `<option value="">Selecione - ${esp.nome}</option>`;
-                
+
                 // Adicionar profissionais da especialidade
                 const profsDaEspecialidade = profissionais.filter(p => 
                     p.especialidade.toLowerCase() === esp.nome.toLowerCase()
                 );
-                
+
                 profsDaEspecialidade.forEach(prof => {
                     const selected = (profissionaisPreSelecionados && 
                                     profissionaisPreSelecionados[esp.campo] === prof.nome) ? 'selected' : '';
@@ -757,7 +772,7 @@ const carregarGlosas = async () => {
     if (!state.aihAtual || !state.aihAtual.id) {
         console.error('AIH atual não definida');
         return;
-    }
+        }
 
     const container = document.getElementById('glosasAtuais');
     const listaGlosasMovimentacao = document.getElementById('listaGlosas');
@@ -1588,4 +1603,3 @@ window.exportarHistoricoMovimentacoes = async (formato) => {
         alert('Erro ao exportar histórico de movimentações: ' + error.message);
     }
 };
-

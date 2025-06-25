@@ -130,11 +130,17 @@
                 <h2>Nova Movimentação</h2>
             </header>
             <div class="container">
+                <!-- Status atual da AIH destacado -->
+                <div id="statusAtualAIH"></div>
+                
+                <!-- Lembrete sobre os status -->
+                <div id="lembreteStatus"></div>
+                
                 <!-- Área de explicação da movimentação -->
                 <div id="explicacaoMovimentacao"></div>
                 
                 <form id="formMovimentacao">
-                    <label>Status Atual:</label>
+                    <label>Status da AIH:</label>
                     <select id="movStatus" required>
                         <option value="1">1 - Finalizada com aprovação direta</option>
                         <option value="2">2 - Ativa com aprovação indireta</option>
@@ -177,7 +183,10 @@
                         <button type="button" id="btnGerenciarGlosas">Gerenciar Glosas</button>
                     </div>
                     
-                    <button type="submit">Salvar Movimentação</button>
+                    <div class="form-buttons">
+                        <button type="button" id="btnCancelarMovimentacao" class="btn-secondary">Cancelar</button>
+                        <button type="submit" class="btn-primary">Salvar Movimentação</button>
+                    </div>
                 </form>
             </div>
         </div>
