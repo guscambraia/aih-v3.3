@@ -1345,12 +1345,268 @@ document.getElementById('btnRelatorios').addEventListener('click', () => {
 
 window.gerarRelatorio = async (tipo) => {
     try {
-        const response = await api(`/relatorios/${tipo}`);
+        // Capturar filtros de período
+        const dataInicio = document.getElementById('relatorioDataInicio')?.value || '';
+        const dataFim = document.getElementById('relatorioDataFim')?.value || '';
+        const competencia = document.getElementById('relatorioCompetencia')?.value || '';
+        
+        const filtros = {
+            data_inicio: dataInicio,
+            data_fim: dataFim,
+            competencia: competencia
+        };
+        
+        // Usar POST para enviar filtros
+        const response = await api(`/relatorios/${tipo}`, {
+            method: 'POST',
+            body: JSON.stringify(filtros)
+        });
+        
         const container = document.getElementById('resultadoRelatorio');
+        
+        // Mostrar período selecionado
+        let periodoTexto = '';
+        if (competencia) {
+            periodoTexto = `Competência: ${competencia}`;
+        } else if (dataInicio && dataFim) {
+            periodoTexto = `Período: ${new Date(dataInicio).toLocaleDateString('pt-BR')} a ${new Date(dataFim).toLocaleDateString('pt-BR')}`;
+        } else if (dataInicio) {
+            periodoTexto = `A partir de: ${new Date(dataInicio).toLocaleDateString('pt-BR')}`;
+        } else if (dataFim) {
+            periodoTexto = `Até: ${new Date(dataFim).toLocaleDateString('pt-BR')}`;
+        } else {
+            periodoTexto = 'Todos os períodos';
+        }
 
         let conteudo = '';
 
         switch(tipo) {
+            case 'tipos-glosa-periodo':
+                conteudo = `
+                    <div class="relatorio-content">
+                        <h3>
+                            📊 Tipos de Glosa Mais Comuns - ${periodoTexto}
+                            <button onclick="exportarRelatorio('${tipo}')" class="btn-success" style="font-size: 0.875rem;">
+                                Exportar Excel
+                            </button>
+                        </h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Tipo de Glosa</th>
+                                    <th>Total de Ocorrências</th>
+                                    <th>Quantidade Total</th>
+                                    <th>Profissionais Envolvidos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${response.resultado.map(r => `
+                                    <tr>
+                                        <td>${r.tipo}</td>
+                                        <td>${r.total_ocorrencias}</td>
+                                        <td>${r.quantidade_total}</td>
+                                        <td style="font-size: 0.875rem;">${r.profissionais.split(',').slice(0, 3).join(', ')}${r.profissionais.split(',').length > 3 ? '...' : ''}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                break;
+                
+            case 'aihs-profissional-periodo':
+                conteudo = `
+                    <div class="relatorio-content">
+                        <h3>
+                            🏥 AIHs Auditadas por Profissional - ${periodoTexto}
+                            <button onclick="exportarRelatorio('${tipo}')" class="btn-success" style="font-size: 0.875rem;">
+                                Exportar Excel
+                            </button>
+                        </h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Profissional</th>
+                                    <th>Especialidade</th>
+                                    <th>AIHs Auditadas</th>
+                                    <th>Total Movimentações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${response.resultado.map(r => `
+                                    <tr>
+                                        <td>${r.profissional}</td>
+                                        <td>${r.especialidade}</td>
+                                        <td>${r.total_aihs_auditadas}</td>
+                                        <td>${r.total_movimentacoes}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                break;
+                
+            case 'glosas-profissional-periodo':
+                conteudo = `
+                    <div class="relatorio-content">
+                        <h3>
+                            📋 Glosas por Profissional - ${periodoTexto}
+                            <button onclick="exportarRelatorio('${tipo}')" class="btn-success" style="font-size: 0.875rem;">
+                                Exportar Excel
+                            </button>
+                        </h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Profissional</th>
+                                    <th>Total Glosas</th>
+                                    <th>Quantidade Total</th>
+                                    <th>Tipos Diferentes</th>
+                                    <th>Principais Tipos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${response.resultado.map(r => `
+                                    <tr>
+                                        <td>${r.profissional}</td>
+                                        <td>${r.total_glosas}</td>
+                                        <td>${r.quantidade_total}</td>
+                                        <td>${r.tipos_diferentes}</td>
+                                        <td style="font-size: 0.875rem;">${r.tipos_glosa.split(',').slice(0, 2).join(', ')}${r.tipos_glosa.split(',').length > 2 ? '...' : ''}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                break;
+                
+            case 'valores-glosas-periodo':
+                const dados = response.resultado;
+                conteudo = `
+                    <div class="relatorio-content">
+                        <h3>
+                            💰 Análise Financeira de Glosas - ${periodoTexto}
+                            <button onclick="exportarRelatorio('${tipo}')" class="btn-success" style="font-size: 0.875rem;">
+                                Exportar Excel
+                            </button>
+                        </h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                            <div class="stat-card">
+                                <h4>Total AIHs com Glosas</h4>
+                                <p class="stat-number">${dados.aihs_com_glosas || 0}</p>
+                                <p class="stat-subtitle">${dados.percentual_aihs_com_glosas}% do total</p>
+                            </div>
+                            <div class="stat-card">
+                                <h4>Valor Total de Glosas</h4>
+                                <p class="stat-number">R$ ${(dados.total_glosas || 0).toFixed(2)}</p>
+                                <p class="stat-subtitle">Diferença entre inicial e atual</p>
+                            </div>
+                            <div class="stat-card">
+                                <h4>Média por AIH com Glosa</h4>
+                                <p class="stat-number">R$ ${(dados.media_glosa_por_aih || 0).toFixed(2)}</p>
+                                <p class="stat-subtitle">Valor médio de glosa</p>
+                            </div>
+                            <div class="stat-card">
+                                <h4>Maior Glosa</h4>
+                                <p class="stat-number">R$ ${(dados.maior_glosa || 0).toFixed(2)}</p>
+                                <p class="stat-subtitle">Menor: R$ ${(dados.menor_glosa || 0).toFixed(2)}</p>
+                            </div>
+                        </div>
+                        <div style="margin-top: 2rem; background: #f8fafc; padding: 1.5rem; border-radius: 8px;">
+                            <h4>Resumo Financeiro</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                                <div>
+                                    <strong>Valor Inicial Total:</strong><br>
+                                    R$ ${(dados.valor_inicial_total || 0).toFixed(2)}
+                                </div>
+                                <div>
+                                    <strong>Valor Atual Total:</strong><br>
+                                    R$ ${(dados.valor_atual_total || 0).toFixed(2)}
+                                </div>
+                                <div>
+                                    <strong>Total de AIHs no Período:</strong><br>
+                                    ${dados.total_aihs_periodo || 0}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                break;
+                
+            case 'estatisticas-periodo':
+                const stats = response.resultado;
+                const totalStats = stats.total_aihs || 1;
+                conteudo = `
+                    <div class="relatorio-content">
+                        <h3>
+                            📈 Estatísticas do Período - ${periodoTexto}
+                            <button onclick="exportarRelatorio('${tipo}')" class="btn-success" style="font-size: 0.875rem;">
+                                Exportar Excel
+                            </button>
+                        </h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                            <div class="stat-card">
+                                <h4>Total de AIHs</h4>
+                                <p class="stat-number">${stats.total_aihs}</p>
+                                <p class="stat-subtitle">No período selecionado</p>
+                            </div>
+                            <div class="stat-card success">
+                                <h4>Aprovação Direta</h4>
+                                <p class="stat-number">${stats.aprovacao_direta}</p>
+                                <p class="stat-subtitle">${((stats.aprovacao_direta/totalStats)*100).toFixed(1)}%</p>
+                            </div>
+                            <div class="stat-card warning">
+                                <h4>Em Discussão</h4>
+                                <p class="stat-number">${stats.em_discussao}</p>
+                                <p class="stat-subtitle">${((stats.em_discussao/totalStats)*100).toFixed(1)}%</p>
+                            </div>
+                            <div class="stat-card info">
+                                <h4>Total de Glosas</h4>
+                                <p class="stat-number">${stats.total_glosas}</p>
+                                <p class="stat-subtitle">${stats.percentual_glosas}% das AIHs</p>
+                            </div>
+                        </div>
+                        <div style="margin-top: 2rem;">
+                            <h4>Movimentações no Período</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                                <div class="info-card">
+                                    <h5>Total de Movimentações</h5>
+                                    <p style="font-size: 1.5rem; font-weight: bold;">${stats.total_movimentacoes}</p>
+                                </div>
+                                <div class="info-card">
+                                    <h5>Entradas SUS</h5>
+                                    <p style="font-size: 1.5rem; font-weight: bold; color: #059669;">${stats.entradas_sus}</p>
+                                </div>
+                                <div class="info-card">
+                                    <h5>Saídas Hospital</h5>
+                                    <p style="font-size: 1.5rem; font-weight: bold; color: #dc2626;">${stats.saidas_hospital}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 2rem; background: #f8fafc; padding: 1.5rem; border-radius: 8px;">
+                            <h4>Resumo Financeiro</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                                <div>
+                                    <strong>Valor Médio Inicial:</strong><br>
+                                    R$ ${(stats.valor_medio_inicial || 0).toFixed(2)}
+                                </div>
+                                <div>
+                                    <strong>Valor Médio Atual:</strong><br>
+                                    R$ ${(stats.valor_medio_atual || 0).toFixed(2)}
+                                </div>
+                                <div>
+                                    <strong>Diferença Total:</strong><br>
+                                    <span style="color: #dc2626;">R$ ${(stats.diferenca_valores || 0).toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                break;
+
+            // Manter relatórios existentes
             case 'acessos':
                 conteudo = `
                     <div class="relatorio-content">
@@ -1445,8 +1701,8 @@ window.gerarRelatorio = async (tipo) => {
                 break;
 
             case 'aprovacoes':
-                const dados = response.resultado[0];
-                const total = dados.total || 1;
+                const dadosAprov = response.resultado[0];
+                const totalAprov = dadosAprov.total || 1;
                 conteudo = `
                     <div class="relatorio-content">
                         <h3>
@@ -1458,23 +1714,23 @@ window.gerarRelatorio = async (tipo) => {
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
                             <div class="stat-card">
                                 <h4>Aprovação Direta</h4>
-                                <p class="stat-number">${dados.aprovacao_direta}</p>
-                                <p class="stat-subtitle">${((dados.aprovacao_direta/total)*100).toFixed(1)}%</p>
+                                <p class="stat-number">${dadosAprov.aprovacao_direta}</p>
+                                <p class="stat-subtitle">${((dadosAprov.aprovacao_direta/totalAprov)*100).toFixed(1)}%</p>
                             </div>
                             <div class="stat-card">
                                 <h4>Aprovação Indireta</h4>
-                                <p class="stat-number">${dados.aprovacao_indireta}</p>
-                                <p class="stat-subtitle">${((dados.aprovacao_indireta/total)*100).toFixed(1)}%</p>
+                                <p class="stat-number">${dadosAprov.aprovacao_indireta}</p>
+                                <p class="stat-subtitle">${((dadosAprov.aprovacao_indireta/totalAprov)*100).toFixed(1)}%</p>
                             </div>
                             <div class="stat-card">
                                 <h4>Em Discussão</h4>
-                                <p class="stat-number">${dados.em_discussao}</p>
-                                <p class="stat-subtitle">${((dados.em_discussao/total)*100).toFixed(1)}%</p>
+                                <p class="stat-number">${dadosAprov.em_discussao}</p>
+                                <p class="stat-subtitle">${((dadosAprov.em_discussao/totalAprov)*100).toFixed(1)}%</p>
                             </div>
                             <div class="stat-card">
                                 <h4>Finalizada Pós-Discussão</h4>
-                                <p class="stat-number">${dados.finalizada_pos_discussao}</p>
-                                <p class="stat-subtitle">${((dados.finalizada_pos_discussao/total)*100).toFixed(1)}%</p>
+                                <p class="stat-number">${dadosAprov.finalizada_pos_discussao}</p>
+                                <p class="stat-subtitle">${((dadosAprov.finalizada_pos_discussao/totalAprov)*100).toFixed(1)}%</p>
                             </div>
                         </div>
                     </div>
@@ -1569,6 +1825,13 @@ window.gerarRelatorio = async (tipo) => {
     } catch (err) {
         alert('Erro ao gerar relatório: ' + err.message);
     }
+};
+
+window.limparFiltrosRelatorio = () => {
+    document.getElementById('relatorioDataInicio').value = '';
+    document.getElementById('relatorioDataFim').value = '';
+    document.getElementById('relatorioCompetencia').value = '';
+    document.getElementById('resultadoRelatorio').innerHTML = '';
 };
 
 window.exportarRelatorio = async (tipo) => {
