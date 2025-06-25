@@ -233,49 +233,6 @@ document.getElementById('formNovoUsuario').addEventListener('submit', async (e) 
     }
 });
 
-// Alterar senha do administrador
-document.getElementById('formAlterarSenhaAdmin').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const senhaAtual = document.getElementById('senhaAtualAdmin').value;
-    const novaSenha = document.getElementById('novaSenhaAdmin').value;
-    const confirmarSenha = document.getElementById('confirmarSenhaAdmin').value;
-
-    // Validar se as senhas coincidem
-    if (novaSenha !== confirmarSenha) {
-        alert('A nova senha e a confirmação não coincidem!');
-        return;
-    }
-
-    // Validar tamanho mínimo da senha
-    if (novaSenha.length < 3) {
-        alert('A nova senha deve ter pelo menos 3 caracteres!');
-        return;
-    }
-
-    const confirmar = await mostrarModal(
-        'Confirmar Alteração de Senha',
-        'Tem certeza que deseja alterar a senha do administrador?'
-    );
-
-    if (!confirmar) return;
-
-    try {
-        await api('/admin/alterar-senha', {
-            method: 'POST',
-            body: JSON.stringify({
-                senha_atual: senhaAtual,
-                nova_senha: novaSenha
-            })
-        });
-
-        alert('Senha alterada com sucesso!');
-        document.getElementById('formAlterarSenhaAdmin').reset();
-    } catch (err) {
-        alert('Erro ao alterar senha: ' + err.message);
-    }
-});
-
 // Logout
 document.getElementById('btnSair').addEventListener('click', () => {
     state.token = null;
