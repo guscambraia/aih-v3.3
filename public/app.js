@@ -645,11 +645,75 @@ document.getElementById('btnNovaMovimentacao').addEventListener('click', () => {
 // Carregue dados necessários para movimentação
 const carregarDadosMovimentacao = async () => {
     try {
-        // 1. Carregar profissionais
+        // 1. Exibir status atual da AIH de forma destacada
+        if (state.aihAtual) {
+            const statusAtualDiv = document.getElementById('statusAtualAIH');
+            if (statusAtualDiv) {
+                statusAtualDiv.innerHTML = `
+                    <div class="status-atual-destaque">
+                        <h3 style="color: #374151; margin-bottom: 0.5rem;">📋 AIH ${state.aihAtual.numero_aih}</h3>
+                        <p style="color: #6b7280; margin-bottom: 1rem;">Status Atual:</p>
+                        <span class="status-badge-grande status-${state.aihAtual.status}">
+                            ${getStatusDescricao(state.aihAtual.status)}
+                        </span>
+                        <p style="color: #6b7280; margin-top: 0.5rem; font-size: 0.875rem;">
+                            Competência: ${state.aihAtual.competencia} | Valor: R$ ${state.aihAtual.valor_atual.toFixed(2)}
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        // 2. Exibir lembrete sobre os status
+        const lembreteStatusDiv = document.getElementById('lembreteStatus');
+        if (lembreteStatusDiv) {
+            lembreteStatusDiv.innerHTML = `
+                <div class="lembrete-status">
+                    <h4 style="color: #78350f; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>💡</span> Guia de Status da AIH
+                    </h4>
+                    <p style="color: #78350f; margin-bottom: 1rem; font-size: 0.9rem;">
+                        Escolha o status correto para esta movimentação:
+                    </p>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <div class="status-numero">1</div>
+                            <div>
+                                <strong style="color: #065f46;">Finalizada com aprovação direta</strong>
+                                <p>AIH foi aprovada sem necessidade de discussão ou correções. Processo encerrado com sucesso.</p>
+                            </div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-numero">2</div>
+                            <div>
+                                <strong style="color: #c2410c;">Ativa com aprovação indireta</strong>
+                                <p>AIH aprovada, mas com pequenos ajustes ou observações que não impedem a liberação.</p>
+                            </div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-numero">3</div>
+                            <div>
+                                <strong style="color: #b91c1c;">Ativa em discussão</strong>
+                                <p>AIH em processo de análise, com pendências que precisam ser resolvidas antes da aprovação.</p>
+                            </div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-numero">4</div>
+                            <div>
+                                <strong style="color: #5b21b6;">Finalizada após discussão</strong>
+                                <p>AIH finalizada após processo de discussão e resolução de pendências. Processo encerrado.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 3. Carregar profissionais
         const profResult = await api('/profissionais');
         const profissionais = profResult.profissionais;
 
-        // 2. Obter profissionais da última movimentação ANTES de preencher os selects
+        // 4. Obter profissionais da última movimentação ANTES de preencher os selects
         let profissionaisPreSelecionados = null;
         if (state.aihAtual && state.aihAtual.movimentacoes && state.aihAtual.movimentacoes.length > 0) {
             const movimentacoesOrdenadas = [...state.aihAtual.movimentacoes].sort((a, b) => 
@@ -659,7 +723,7 @@ const carregarDadosMovimentacao = async () => {
             console.log('Profissionais a pré-selecionar:', profissionaisPreSelecionados);
         }
 
-        // 3. Preencher selects COM pré-seleção integrada
+        // 5. Preencher selects COM pré-seleção integrada
         const especialidades = [
             { id: 'movProfMedicina', nome: 'Medicina', campo: 'prof_medicina' },
             { id: 'movProfEnfermagem', nome: 'Enfermagem', campo: 'prof_enfermagem' },
@@ -691,7 +755,7 @@ const carregarDadosMovimentacao = async () => {
             }
         });
 
-        // 4. Carregar próxima movimentação possível
+        // 6. Carregar próxima movimentação possível
         if (state.aihAtual) {
             const proximaMovResult = await api(`/aih/${state.aihAtual.id}/proxima-movimentacao`);
 
@@ -719,13 +783,13 @@ const carregarDadosMovimentacao = async () => {
             }
         }
 
-        // 5. Preencher dados da AIH atual
+        // 7. Preencher dados da AIH atual
         if (state.aihAtual) {
             document.getElementById('movCompetencia').value = state.aihAtual.competencia;
             document.getElementById('movValor').value = state.aihAtual.valor_atual;
         }
 
-        // 6. Carregar e exibir glosas existentes (sempre por último)
+        // 8. Carregar e exibir glosas existentes (sempre por último)
         await carregarGlosas();
 
     } catch (err) {
@@ -930,6 +994,22 @@ document.getElementById('btnSalvarGlosas').addEventListener('click', async () =>
 document.getElementById('formMovimentacao').addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    // 1. Verificar se há mudança de status
+    const novoStatus = parseInt(document.getElementById('movStatus').value);
+    const statusAtual = state.aihAtual.status;
+    
+    if (novoStatus !== statusAtual) {
+        const confirmarMudanca = await mostrarModal(
+            'Confirmação de Mudança de Status',
+            `O status da AIH será alterado de "${getStatusDescricao(statusAtual)}" para "${getStatusDescricao(novoStatus)}". Confirma esta alteração?`
+        );
+
+        if (!confirmarMudanca) {
+            return;
+        }
+    }
+
+    // 2. Verificar glosas pendentes
     if (state.glosasPendentes && state.glosasPendentes.length > 0) {
         const continuar = await mostrarModal(
             'Aviso',
@@ -942,7 +1022,7 @@ document.getElementById('formMovimentacao').addEventListener('submit', async (e)
     try {
         const dados = {
             tipo: document.getElementById('movTipo').value,
-            status_aih: parseInt(document.getElementById('movStatus').value),
+            status_aih: novoStatus,
             valor_conta: parseFloat(document.getElementById('movValor').value),
             competencia: document.getElementById('movCompetencia').value,
             prof_medicina: document.getElementById('movProfMedicina').value,
@@ -965,6 +1045,18 @@ document.getElementById('formMovimentacao').addEventListener('submit', async (e)
         mostrarInfoAIH(aih);
     } catch (err) {
         alert('Erro ao salvar movimentação: ' + err.message);
+    }
+});
+
+// Botão cancelar movimentação
+document.getElementById('btnCancelarMovimentacao').addEventListener('click', async () => {
+    const confirmarCancelamento = await mostrarModal(
+        'Cancelar Movimentação',
+        'Tem certeza que deseja cancelar esta movimentação? Todas as alterações serão perdidas.'
+    );
+
+    if (confirmarCancelamento) {
+        voltarTelaAnterior();
     }
 });
 
