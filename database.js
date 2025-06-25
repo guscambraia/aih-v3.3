@@ -67,6 +67,11 @@ const initDB = async () => {
             // Ignora erro se coluna já existe
         });
 
+        // Adicionar coluna matricula se não existir (para bancos existentes)
+        db.run(`ALTER TABLE usuarios ADD COLUMN matricula TEXT`, (err) => {
+            // Ignora erro se coluna já existe
+        });
+
         // Glosas
         db.run(`CREATE TABLE IF NOT EXISTS glosas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
