@@ -129,24 +129,107 @@ document.getElementById('formLogin').addEventListener('submit', async (e) => {
     }
 });
 
-// Cadastrar usuário
-document.getElementById('linkCadastrar').addEventListener('click', async (e) => {
-    e.preventDefault();
+// Gerenciar usuários (apenas admin)
+document.getElementById('btnGerenciarUsuarios').addEventListener('click', async () => {
+    const nome = prompt('Nome de usuário do administrador:');
+    if (nome !== 'admin') {
+        alert('Acesso negado');
+        return;
+    }
 
-    const nome = prompt('Nome de usuário:');
-    if (!nome) return;
-
-    const senha = prompt('Senha:');
+    const senha = prompt('Senha do administrador:');
     if (!senha) return;
 
     try {
-        await api('/cadastrar', {
+        await api('/admin/login', {
             method: 'POST',
             body: JSON.stringify({ nome, senha })
         });
-        alert('Usuário cadastrado com sucesso!');
+
+        mostrarTela('telaGerenciarUsuarios');
+        carregarUsuarios();
     } catch (err) {
-        alert('Erro ao cadastrar: ' + err.message);
+        alert('Credenciais de administrador inválidas');
+    }
+});
+
+// Carregar lista de usuários
+const carregarUsuarios = async () => {
+    try {
+        const response = await api('/admin/usuarios');
+        const container = document.getElementById('listaUsuarios');
+
+        if (response.usuarios.length === 0) {
+            container.innerHTML = '<p>Nenhum usuário cadastrado</p>';
+            return;
+        }
+
+        container.innerHTML = response.usuarios.map(u => `
+            <div class="usuario-item">
+                <div class="usuario-info">
+                    <div class="usuario-nome">${u.nome}</div>
+                    <div class="usuario-matricula">Matrícula: ${u.matricula || 'Não informada'}</div>
+                    <div style="font-size: 0.75rem; color: var(--gray-500);">
+                        Criado em: ${new Date(u.criado_em).toLocaleDateString('pt-BR')}
+                    </div>
+                </div>
+                <button onclick="removerUsuario(${u.id}, '${u.nome}')" 
+                        class="btn-remover" 
+                        ${u.nome === 'admin' ? 'disabled title="Não é possível excluir o administrador"' : ''}>
+                    Remover
+                </button>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error('Erro ao carregar usuários:', err);
+        document.getElementById('listaUsuarios').innerHTML = '<p style="color: var(--danger);">Erro ao carregar usuários</p>';
+    }
+};
+
+// Remover usuário
+window.removerUsuario = async (id, nome) => {
+    if (nome === 'admin') {
+        alert('Não é possível excluir o administrador');
+        return;
+    }
+
+    const confirmar = await mostrarModal(
+        'Confirmar Exclusão',
+        `Tem certeza que deseja excluir o usuário "${nome}"?`
+    );
+
+    if (!confirmar) return;
+
+    try {
+        await api(`/admin/usuarios/${id}`, { method: 'DELETE' });
+        alert('Usuário removido com sucesso!');
+        carregarUsuarios();
+    } catch (err) {
+        alert('Erro ao remover usuário: ' + err.message);
+    }
+};
+
+// Adicionar novo usuário
+document.getElementById('formNovoUsuario').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    try {
+        const dados = {
+            nome: document.getElementById('novoUsuarioNome').value,
+            matricula: document.getElementById('novoUsuarioMatricula').value,
+            senha: document.getElementById('novoUsuarioSenha').value
+        };
+
+        await api('/cadastrar', {
+            method: 'POST',
+            body: JSON.stringify(dados)
+        });
+
+        alert('Usuário adicionado com sucesso!');
+        document.getElementById('formNovoUsuario').reset();
+        carregarUsuarios();
+    } catch (err) {
+        alert('Erro ao adicionar usuário: ' + err.message);
     }
 });
 

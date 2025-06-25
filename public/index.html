@@ -17,7 +17,7 @@
                     <input type="text" id="loginUsuario" placeholder="Usuário" required>
                     <input type="password" id="loginSenha" placeholder="Senha" required>
                     <button type="submit">Entrar</button>
-                    <a href="#" id="linkCadastrar">Cadastrar novo usuário</a>
+                    <button type="button" id="btnGerenciarUsuarios" class="btn-admin">Gerenciar Usuários</button>
                 </form>
                 <footer class="login-footer">
                     <p>Desenvolvido por Gustavo Cambraia</p>
@@ -435,6 +435,36 @@
                 </div>
 
                 <div id="resultadoRelatorio"></div>
+            </div>
+        </div>
+
+        <!-- Tela Gerenciamento de Usuários -->
+        <div id="telaGerenciarUsuarios" class="tela">
+            <header>
+                <button class="btn-voltar" onclick="mostrarTela('telaLogin')">← Voltar</button>
+                <h2>Gerenciamento de Usuários</h2>
+            </header>
+            <div class="container">
+                <div class="admin-section">
+                    <h3>Usuários Cadastrados</h3>
+                    <div id="listaUsuarios"></div>
+                </div>
+
+                <div class="admin-section">
+                    <h3>Adicionar Novo Usuário</h3>
+                    <form id="formNovoUsuario">
+                        <label>Nome de usuário:</label>
+                        <input type="text" id="novoUsuarioNome" placeholder="Nome de usuário" required>
+                        
+                        <label>Número de matrícula:</label>
+                        <input type="text" id="novoUsuarioMatricula" placeholder="Número de matrícula" required>
+                        
+                        <label>Senha:</label>
+                        <input type="password" id="novoUsuarioSenha" placeholder="Senha" required>
+                        
+                        <button type="submit">Adicionar Usuário</button>
+                    </form>
+                </div>
             </div>
         </div>
 

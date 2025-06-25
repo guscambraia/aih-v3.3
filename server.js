@@ -35,11 +35,56 @@ app.post('/api/login', async (req, res) => {
 
 app.post('/api/cadastrar', async (req, res) => {
     try {
-        const { nome, senha } = req.body;
-        await cadastrarUsuario(nome, senha);
+        const { nome, matricula, senha } = req.body;
+        await cadastrarUsuario(nome, matricula, senha);
         res.json({ success: true, message: 'Usuário criado' });
     } catch (err) {
         res.status(400).json({ error: err.message });
+    }
+});
+
+// Login de administrador
+app.post('/api/admin/login', async (req, res) => {
+    try {
+        const { nome, senha } = req.body;
+        
+        // Verificar se é o admin
+        if (nome !== 'admin') {
+            return res.status(401).json({ error: 'Acesso negado' });
+        }
+        
+        const result = await login(nome, senha);
+        res.json({ success: true, message: 'Admin autenticado' });
+    } catch (err) {
+        res.status(401).json({ error: 'Credenciais inválidas' });
+    }
+});
+
+// Listar usuários (apenas admin)
+app.get('/api/admin/usuarios', async (req, res) => {
+    try {
+        const usuarios = await all('SELECT id, nome, matricula, criado_em FROM usuarios ORDER BY nome');
+        res.json({ usuarios });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Remover usuário (apenas admin)
+app.delete('/api/admin/usuarios/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Não permitir excluir o admin
+        const usuario = await get('SELECT nome FROM usuarios WHERE id = ?', [id]);
+        if (usuario && usuario.nome === 'admin') {
+            return res.status(400).json({ error: 'Não é possível excluir o administrador' });
+        }
+        
+        await run('DELETE FROM usuarios WHERE id = ?', [id]);
+        res.json({ success: true, message: 'Usuário removido' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 

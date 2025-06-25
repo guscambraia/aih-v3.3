@@ -61,7 +61,7 @@ const login = async (nome, senha) => {
 };
 
 // Cadastrar usuário
-const cadastrarUsuario = async (nome, senha) => {
+const cadastrarUsuario = async (nome, matricula, senha) => {
     const usuarioExiste = await get('SELECT id FROM usuarios WHERE nome = ?', [nome]);
     
     if (usuarioExiste) {
@@ -70,11 +70,11 @@ const cadastrarUsuario = async (nome, senha) => {
     
     const senhaHash = await hashSenha(senha);
     const result = await run(
-        'INSERT INTO usuarios (nome, senha_hash) VALUES (?, ?)',
-        [nome, senhaHash]
+        'INSERT INTO usuarios (nome, matricula, senha_hash) VALUES (?, ?, ?)',
+        [nome, matricula, senhaHash]
     );
     
-    return { id: result.id, nome };
+    return { id: result.id, nome, matricula };
 };
 
 module.exports = {
