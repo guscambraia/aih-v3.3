@@ -70,7 +70,7 @@
     </div>
 
     <!-- O resumo financeiro será inserido dinamicamente aqui pelo JavaScript -->
-    
+
     <!-- Rodapé da tela principal -->
     <footer class="main-footer">
         <p>Desenvolvido por Gustavo Cambraia</p>
@@ -451,20 +451,43 @@
                 </div>
 
                 <div class="admin-section">
-                    <h3>Adicionar Novo Usuário</h3>
-                    <form id="formNovoUsuario">
-                        <label>Nome de usuário:</label>
-                        <input type="text" id="novoUsuarioNome" placeholder="Nome de usuário" required>
-                        
-                        <label>Número de matrícula:</label>
-                        <input type="text" id="novoUsuarioMatricula" placeholder="Número de matrícula" required>
-                        
-                        <label>Senha:</label>
-                        <input type="password" id="novoUsuarioSenha" placeholder="Senha" required>
-                        
-                        <button type="submit">Adicionar Usuário</button>
-                    </form>
-                </div>
+                <h3>🔧 Adicionar Novo Usuário</h3>
+                <form id="formNovoUsuario">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <label for="novoUsuarioNome" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Nome de usuário:</label>
+                            <input type="text" id="novoUsuarioNome" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 6px;">
+                        </div>
+                        <div>
+                            <label for="novoUsuarioMatricula" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Matrícula:</label>
+                            <input type="text" id="novoUsuarioMatricula" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 6px;">
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label for="novoUsuarioSenha" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Senha:</label>
+                        <input type="password" id="novoUsuarioSenha" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 6px;">
+                    </div>
+                    <button type="submit" class="btn-primary" style="width: 100%;">Adicionar Usuário</button>
+                </form>
+            </div>
+
+            <div class="admin-section">
+                <h3>🔐 Alterar Senha do Administrador</h3>
+                <form id="formAlterarSenhaAdmin">
+                    <div style="margin-bottom: 1rem;">
+                        <label for="senhaAtualAdmin" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Senha Atual:</label>
+                        <input type="password" id="senhaAtualAdmin" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 6px;">
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label for="novaSenhaAdmin" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Nova Senha:</label>
+                        <input type="password" id="novaSenhaAdmin" required minlength="3" style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 6px;">
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label for="confirmarSenhaAdmin" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Confirmar Nova Senha:</label>
+                        <input type="password" id="confirmarSenhaAdmin" required minlength="3" style="width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: 6px;">
+                    </div>
+                    <button type="submit" class="btn-admin" style="width: 100%;">Alterar Senha</button>
+                </form>
             </div>
         </div>
 

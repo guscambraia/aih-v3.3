@@ -88,6 +88,39 @@ app.delete('/api/admin/usuarios/:id', async (req, res) => {
     }
 });
 
+// Alterar senha do administrador
+app.post('/api/admin/alterar-senha', async (req, res) => {
+    try {
+        const { senha_atual, nova_senha } = req.body;
+        
+        // Verificar senha atual do admin
+        const admin = await get('SELECT * FROM usuarios WHERE nome = ?', ['admin']);
+        if (!admin) {
+            return res.status(404).json({ error: 'Administrador não encontrado' });
+        }
+        
+        const bcrypt = require('bcryptjs');
+        const senhaValida = await bcrypt.compare(senha_atual, admin.senha_hash);
+        
+        if (!senhaValida) {
+            return res.status(401).json({ error: 'Senha atual incorreta' });
+        }
+        
+        // Validar nova senha
+        if (!nova_senha || nova_senha.length < 3) {
+            return res.status(400).json({ error: 'Nova senha deve ter pelo menos 3 caracteres' });
+        }
+        
+        // Atualizar senha
+        const novaSenhaHash = await bcrypt.hash(nova_senha, 10);
+        await run('UPDATE usuarios SET senha_hash = ? WHERE nome = ?', [novaSenhaHash, 'admin']);
+        
+        res.json({ success: true, message: 'Senha alterada com sucesso' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Dashboard aprimorado com filtro por competência
 app.get('/api/dashboard', verificarToken, async (req, res) => {
     try {
